@@ -1,0 +1,143 @@
+// Rubico Lead Engine — data model (requirement.md §5)
+//
+// FR-B4: all pipeline tables plus job_runs and api_usage exist in the FIRST
+// migration. Retrofitting api_usage means retrofitting every call site.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+  runtime      = "nodejs"
+}
+
+// Prisma 7: the connection URL lives in prisma.config.ts, and the runtime
+// client is constructed with a driver adapter (see PrismaService).
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id                String    @id @default(cuid())
+  canonicalDomain   String    @unique
+  name              String
+  country           String?
+  region            String?
+  headcountBand     String?
+  industry          String?
+  detectedStack     Json?
+  legacyFlags       Json?
+  atsProvider       String?
+  atsSlug           String?
+  firstSeenAt       DateTime  @default(now())
+  lastEnrichedAt    DateTime?
+  suppressionReason String? // client | competitor | rejected | do-not-contact
+  signals           Signal[]
+  leads             Lead[]
+  contacts          Contact[]
+
+  @@index([suppressionReason])
+}
+
+model Signal {
+  id             String   @id @default(cuid())
+  companyId      String
+  type           String // F-LEG | S1..S5
+  eventDate      DateTime
+  observedAt     DateTime @default(now())
+  sourceUrl      String
+  sourceName     String
+  excerpt        String?
+  raw            Json
+  confirmedByLlm Boolean  @default(false)
+  // The uniqueness of this column IS the dedupe mechanism (acceptance A2).
+  dedupeHash     String   @unique
+  company        Company  @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, type, eventDate])
+}
+
+model Lead {
+  id                String     @id @default(cuid())
+  companyId         String
+  fitScore          Int
+  intentScore       Float
+  compoundBonus     Int        @default(0)
+  totalScore        Int
+  band              String // immediate | high | investigate | ignore
+  llmClassification Json?
+  likelyNeed        String?
+  rubicoService     String?
+  brief             Json?
+  confidence        String?
+  status            String     @default("new")
+  scoredAt          DateTime
+  createdAt         DateTime   @default(now())
+  company           Company    @relation(fields: [companyId], references: [id])
+  decisions         Decision[]
+
+  @@index([band, status, totalScore])
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  role        String?
+  seniority   String?
+  email       String?
+  emailStatus String?
+  source      String
+  resolvedAt  DateTime @default(now())
+  creditCost  Float    @default(0)
+  company     Company  @relation(fields: [companyId], references: [id])
+}
+
+model Decision {
+  id         String   @id @default(cuid())
+  leadId     String
+  user       String
+  decision   String // approved | rejected
+  reasonCode String // wrong_fit | stale | already_known | no_real_need | bad_contact | good
+  notes      String?
+  // FR-B3: captured at decision time, never re-read from Lead.totalScore later.
+  // The lead's score changes nightly and calibration (M6) needs the score the
+  // human actually saw.
+  scoreAtDecision Int
+  decidedAt       DateTime @default(now())
+  lead            Lead     @relation(fields: [leadId], references: [id])
+}
+
+model ApiUsage {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  provider  String
+  operation String
+  units     Float
+  usdCost   Float
+  leadId    String?
+
+  @@index([date, provider])
+}
+
+model ScoringConfig {
+  key       String   @id // 'S1.weight' | 'S1.halfLifeDays' | 'compound.bonus'
+  value     Float
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+model JobRun {
+  id             String    @id @default(cuid())
+  jobName        String
+  idempotencyKey String    @unique
+  status         String // queued | running | succeeded | failed | skipped
+  params         Json?
+  counts         Json?
+  error          String?
+  triggeredBy    String // 'n8n' | 'manual'
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([jobName, createdAt])
+}
