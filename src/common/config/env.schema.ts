@@ -1,0 +1,133 @@
+import { z } from 'zod';
+
+/**
+ * Typed environment schema — requirement.md §10.
+ *
+ * FR-B20: model and provider selection is config, not code.
+ * FR-B21: SEC_USER_AGENT must identify Rubico with a contact address.
+ *
+ * Every variable the application will ever read is declared here. Nothing else
+ * in the codebase may touch `process.env` (see AppConfigService).
+ */
+
+/** `''` and `undefined` both mean "not set" for an env var. */
+const unset = (v: unknown): boolean => v === undefined || v === null || v === '';
+
+/** Number from an env string, with an optional default. */
+const envNumber = (def?: number) =>
+  z.preprocess((v) => (unset(v) ? def : Number(v)), z.number({ error: 'must be a number' }));
+
+/** Boolean from an env string: 1/true/yes/on are true, everything else false. */
+const envBoolean = (def: boolean) =>
+  z.preprocess((v) => {
+    if (unset(v)) return def;
+    if (typeof v === 'boolean') return v;
+    return ['1', 'true', 'yes', 'on'].includes(String(v).trim().toLowerCase());
+  }, z.boolean());
+
+/** A positive USD amount. */
+const usd = (def?: number) => envNumber(def).pipe(z.number().nonnegative());
+
+const secret = (min: number, label: string) =>
+  z.string().min(min, `${label} must be at least ${min} characters`);
+
+export const LLM_PROVIDERS = ['gemini', 'anthropic'] as const;
+export type LlmProviderName = (typeof LLM_PROVIDERS)[number];
+
+export const envSchema = z.object({
+  // ── Runtime ──────────────────────────────────────────────────────────────
+  DATABASE_URL: z
+    .string()
+    .min(1)
+    .refine((v) => v.startsWith('postgres://') || v.startsWith('postgresql://'), {
+      error: 'must be a postgres:// or postgresql:// connection string',
+    }),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: envNumber(3000).pipe(z.number().int().min(1).max(65535)),
+  // FR-B15: bind to loopback in production when Next and n8n are co-hosted.
+  BIND_ADDRESS: z.string().min(1).default('127.0.0.1'),
+
+  // ── Auth (§8.1, §8.3) ────────────────────────────────────────────────────
+  INTERNAL_API_TOKEN: secret(32, 'INTERNAL_API_TOKEN'),
+  SESSION_SECRET: secret(32, 'SESSION_SECRET'),
+  DASHBOARD_EMAIL: z.email(),
+  DASHBOARD_PASSWORD_HASH: z.string().min(1),
+
+  // ── Outbound to n8n (§8.2) ───────────────────────────────────────────────
+  N8N_ALERT_WEBHOOK_URL: z.url(),
+  N8N_WEBHOOK_TOKEN: z.string().min(1),
+
+  // ── LLM selection (§11, FR-B20) ──────────────────────────────────────────
+  LLM_CLASSIFY_PROVIDER: z.enum(LLM_PROVIDERS).default('gemini'),
+  LLM_CLASSIFY_MODEL: z.string().min(1).default('gemini-2.5-flash-lite'),
+  LLM_BRIEF_PROVIDER: z.enum(LLM_PROVIDERS).default('anthropic'),
+  LLM_BRIEF_MODEL: z.string().min(1).default('claude-sonnet-5'),
+  // FR-AI3: briefs go through the batch endpoint (50% off).
+  LLM_BRIEF_BATCH: envBoolean(true),
+
+  // ── Provider credentials ─────────────────────────────────────────────────
+  GEMINI_API_KEY: z.string().min(1),
+  ANTHROPIC_API_KEY: z.string().min(1),
+  GITHUB_TOKEN: z.string().min(1),
+  PRODUCT_HUNT_TOKEN: z.string().min(1),
+
+  // ── Cost caps (§6) ───────────────────────────────────────────────────────
+  MONTHLY_CAP_USD: usd(25),
+  DAILY_CAP_USD: usd(1.5),
+  PER_LEAD_BUDGET_USD: usd(0.1),
+  // FR-C2 is a hard cap *per provider*, and §6.3 sets GEMINI_MONTHLY_CAP_USD
+  // directly. §10 lists only the global cap, so these are optional overrides
+  // that fall back to MONTHLY_CAP_USD.
+  GEMINI_MONTHLY_CAP_USD: usd().optional(),
+  ANTHROPIC_MONTHLY_CAP_USD: usd().optional(),
+
+  // FR-C9: the price table lives in config, not code. Rates move.
+  PRICE_TABLE_PATH: z.string().min(1).default('./config/pricing.json'),
+
+  // ── Sources ──────────────────────────────────────────────────────────────
+  // FR-B21: SEC fair-access requires a User-Agent identifying us with a
+  // contact address. Without it SEC will block the crawler.
+  SEC_USER_AGENT: z
+    .string()
+    .min(1)
+    .refine((v) => /[^\s@]+@[^\s@]+\.[^\s@]+/.test(v), {
+      error: 'must contain a contact email address (SEC fair-access requirement)',
+    }),
+});
+
+export type Env = z.infer<typeof envSchema>;
+
+/**
+ * Parse and validate the environment. Throws with every problem listed, not
+ * just the first — a boot failure should tell you everything that is wrong.
+ */
+export function parseEnv(raw: Record<string, unknown>): Env {
+  const result = envSchema.safeParse(raw);
+  if (result.success) return result.data;
+
+  const lines = result.error.issues.map((issue) => {
+    const key = issue.path.join('.') || '(root)';
+    return `  • ${key}: ${issue.message}`;
+  });
+  throw new Error(
+    `Invalid environment — ${lines.length} problem(s) found.\n` +
+      `${lines.join('\n')}\n` +
+      `See requirement.md §10 and .env.example for the full list.`,
+  );
+}
+
+let parsed: Env | null = null;
+
+/** Used as `ConfigModule.forRoot({ validate })`. Caches for AppConfigService. */
+export function validateEnv(raw: Record<string, unknown>): Env {
+  parsed = parseEnv(raw);
+  return parsed;
+}
+
+/** The validated environment. Only valid after ConfigModule has initialised. */
+export function getValidatedEnv(): Env {
+  if (!parsed) {
+    throw new Error('Environment accessed before ConfigModule initialised.');
+  }
+  return parsed;
+}

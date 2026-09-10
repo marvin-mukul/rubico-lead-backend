@@ -1,0 +1,41 @@
+{
+  "anthropic": {
+    "claude-sonnet-5": {
+      "inputPerMTok": 2.0,
+      "outputPerMTok": 10.0,
+      "cachedInputPerMTok": 0.2,
+      "cacheWritePerMTok": 2.5,
+      "batchMultiplier": 0.5
+    },
+    "claude-haiku-4-5": {
+      "inputPerMTok": 1.0,
+      "outputPerMTok": 5.0,
+      "cachedInputPerMTok": 0.1,
+      "cacheWritePerMTok": 1.25,
+      "batchMultiplier": 0.5
+    },
+    "claude-opus-5": {
+      "inputPerMTok": 5.0,
+      "outputPerMTok": 25.0,
+      "cachedInputPerMTok": 0.5,
+      "cacheWritePerMTok": 6.25,
+      "batchMultiplier": 0.5
+    }
+  },
+  "gemini": {
+    "gemini-2.5-flash-lite": {
+      "inputPerMTok": 0.1,
+      "outputPerMTok": 0.4,
+      "cachedInputPerMTok": 0.025,
+      "cacheWritePerMTok": 0.1,
+      "batchMultiplier": 0.5
+    },
+    "gemini-2.5-flash": {
+      "inputPerMTok": 0.3,
+      "outputPerMTok": 2.5,
+      "cachedInputPerMTok": 0.075,
+      "cacheWritePerMTok": 0.3,
+      "batchMultiplier": 0.5
+    }
+  }
+}
