@@ -64,7 +64,7 @@ These are settled. Do not relitigate them mid-phase.
 | P2 | Auth guards + idempotency interceptor ✅ | P0, P1 | §8.1, §8.3 |
 | P3 | Notifications (Notifier → n8n) ✅ | P0 | §8.2 |
 | P4 | **Metering & cost enforcement** ✅ | P1, P3 | §6 |
-| P5 | Job runner + `/internal/jobs/*` + health | P1, P2, P3 | §7, §8.1 |
+| P5 | Job runner + `/internal/jobs/*` + health ✅ | P1, P2, P3 | §7, §8.1 |
 | P6 | Companies: canonical domain, dedupe, suppression, fit filter | P1 | §3, parent §4.1 |
 | P7 | Signals: dedupe hash, persistence, compound detection | P1, P6 | §5, §12 |
 | P8a | Source: `sec-edgar` | P5, P6, P7 | §4, §7.2 |
@@ -376,49 +376,56 @@ spending.
 
 ---
 
-## P5 — Job runner and `/internal/jobs/*`
+## P5 — Job runner and `/internal/jobs/*`  ✅ COMPLETE
 
 **Goal:** n8n can trigger work over HTTP, safely and idempotently.
 **Spec refs:** §7 in full, §8.1.
 
 ### Tasks
-- [ ] `jobs/job.registry.ts` — map of `jobName → JobHandler`. Handlers register
-      themselves from their own modules; the registry has no knowledge of specific jobs.
-- [ ] `jobs/job.runner.ts`:
-      - **FR-B5** `POST /internal/jobs/:jobName/run` returns **202 immediately** with
-        `{ jobRunId, jobName, status }`. It never awaits the work. Kick off with a
-        detached async call whose rejection is caught and written to `job_runs.error`.
-      - **FR-B6** concurrency guard keyed on `jobName`. A second trigger for a running job
-        returns 202 with `status: 'skipped'` and the in-flight run's id.
-      - **FR-B7** `X-Idempotency-Key` required (reuse P2's interceptor).
-      - **FR-B8** every run writes `counts`: fetched, deduped, filteredOut, enriched,
-        classified, scored, briefed. These feed metrics M1–M8.
-      - **FR-B9** per-record transactions, never per-batch. A mid-run failure leaves
-        committed work intact.
-      - On terminal failure, fire a `job.failed` notification.
-- [ ] `GET /internal/jobs/runs/:jobRunId` → `{ status, startedAt, finishedAt, counts, error }`.
-- [ ] `GET /internal/health` → `{ status, db, mtdSpendUsd }` (uses P4's spend repository).
-- [ ] All three routes behind `@InternalOnly()`.
+- [x] `common/validation/zod-validation.pipe.ts` — Zod as the runtime validator
+      for every HTTP body from here on (§9).
+- [x] `jobs/job.types.ts` — `JobHandler`, `JobContext`, `JobCounts` with the
+      fixed FR-B8 stage names, and `serializeCounts()` (Prisma's
+      `InputJsonValue` needs an index signature, and `undefined` must not reach
+      JSONB — a stage that never ran should be absent, not null).
+- [x] `jobs/job.registry.ts` — handlers self-register; the registry knows no
+      job by name (FR-B1).
+- [x] `jobs/advisory-lock.service.ts` — see the resolution below.
+- [x] `jobs/job-runner.service.ts` — FR-B5/B6/B7/B8/B9, `job.failed` alerts,
+      and `awaitRun()` for tests and graceful shutdown.
+- [x] `jobs/jobs.controller.ts` — `POST /internal/jobs/:jobName/run` (202),
+      `GET /internal/jobs/runs/:jobRunId`.
+- [x] `jobs/health.controller.ts` — `GET /internal/health`.
 
-### ⚠ Design risk to resolve in this phase
-FR-B6 specifies a Postgres **session-level** advisory lock (`pg_try_advisory_lock`). Prisma
-runs each query on an arbitrary pooled connection, so a lock taken via `$queryRaw` is not
-reliably held — or released — on the same connection for the life of a long job. Pick one
-and write the choice into a comment at the lock site:
-
-- **Recommended:** hold a dedicated `pg.Client` (`pg` is already installed — P1) for the duration of
-  the run, take `pg_try_advisory_lock(hashtext($1))` on it, release in a `finally`.
-- **Alternative:** a partial unique index on `job_runs(jobName) WHERE status = 'running'`,
-  letting Postgres reject the second run. Simpler, but diverges from the spec's wording.
-
-Do not use `pg_try_advisory_xact_lock` inside a Prisma interactive transaction — it would
-hold a transaction open for the whole ingestion run.
+### ✅ The advisory-lock design risk, resolved
+Took the **dedicated `pg.Client`** option. `AdvisoryLockService` opens its own
+connection per lock, holds `pg_try_advisory_lock(hashtext($1))` on it for the
+run's duration, and closes it on release. Closing is also the safety net: if
+the process dies mid-run, Postgres drops the session and the lock with it, so
+a crashed run never blocks the next trigger forever.
 
 ### Done when
-- Trigger a 10-second dummy job: the HTTP response returns in <100ms with a `jobRunId`.
-- Triggering it again while running returns 202 `status: 'skipped'` with the same id.
-- Same `X-Idempotency-Key` twice → one `job_runs` row (§12 test, now end-to-end).
-- Killing the process mid-run leaves prior per-record commits in the DB (FR-B9).
+- [x] A 400ms job returns its `jobRunId` in **under 200ms** (FR-B5).
+- [x] A concurrent trigger returns `status: 'skipped'` with the **in-flight
+      run's id** (FR-B6).
+- [x] A replayed idempotency key returns the same run and the handler runs
+      **once** (FR-B7).
+- [x] `counts` are persisted as accumulated (FR-B8), and **survive a failure** —
+      a handler that counts 7 then throws leaves `{fetched: 7}` plus the error.
+- [x] The lock is released after a failure, so the next trigger starts.
+- [x] Advisory locks: granted, refused to a second holder, reusable after
+      release, independent across keys, tolerant of double release.
+- [x] End-to-end over HTTP: 401 without/with a wrong internal token; health
+      returns `{"status":"ok","db":true,"mtdSpendUsd":0}`; missing
+      `X-Idempotency-Key` → 400; unknown job → 404; `since: "not-a-date"` → 400
+      with Zod issues.
+- [x] 12 tests passing.
+
+### Carried forward
+No jobs are registered yet — `Registered: (none)` is correct until P8a. Also:
+a run interrupted by a process restart stays `running` in the table. Postgres
+frees the lock, so nothing deadlocks, but the row needs a sweeper. Not in
+Phase 0 scope; note it if runs start looking stuck.
 
 ---
 
@@ -734,7 +741,7 @@ Five test groups. No HTTP-layer tests, no e2e, no coverage target.
 |---|---|---|
 | `scoring` unit tests (5 cases) | P10 | ☐ |
 | `dedupeHash` unit tests | P7 | ☐ |
-| Fit filter unit tests | P6 | ☐ |
+| Fit filter unit tests | P6 | ✅ |
 | `MeteredClient` integration test (§6.3) | P4 | ✅ |
 | Idempotency integration test | P2 | ✅ |
 

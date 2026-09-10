@@ -6,6 +6,7 @@ import { AppConfigModule } from './common/config/index.js';
 import { IdempotencyModule } from './common/idempotency/index.js';
 import { MeteringModule } from './common/metering/index.js';
 import { PrismaModule } from './common/prisma/index.js';
+import { JobsModule } from './jobs/index.js';
 import { NotificationsModule } from './notifications/index.js';
 
 @Module({
@@ -16,6 +17,7 @@ import { NotificationsModule } from './notifications/index.js';
     IdempotencyModule,
     NotificationsModule,
     MeteringModule,
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
