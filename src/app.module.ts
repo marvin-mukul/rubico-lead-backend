@@ -6,8 +6,10 @@ import { AppConfigModule } from './common/config/index.js';
 import { IdempotencyModule } from './common/idempotency/index.js';
 import { MeteringModule } from './common/metering/index.js';
 import { PrismaModule } from './common/prisma/index.js';
+import { CompaniesModule } from './companies/index.js';
 import { JobsModule } from './jobs/index.js';
 import { NotificationsModule } from './notifications/index.js';
+import { ScoringConfigModule } from './scoring-config/index.js';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { NotificationsModule } from './notifications/index.js';
     NotificationsModule,
     MeteringModule,
     JobsModule,
+    ScoringConfigModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
