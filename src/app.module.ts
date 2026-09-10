@@ -9,6 +9,7 @@ import { PrismaModule } from './common/prisma/index.js';
 import { CompaniesModule } from './companies/index.js';
 import { EnrichmentModule } from './enrichment/index.js';
 import { JobsModule } from './jobs/index.js';
+import { LlmModule } from './llm/index.js';
 import { NotificationsModule } from './notifications/index.js';
 import { ScoringConfigModule } from './scoring-config/index.js';
 import { ScoringModule } from './scoring/index.js';
@@ -30,6 +31,7 @@ import { SourcesModule } from './sources/index.js';
     SourcesModule,
     EnrichmentModule,
     ScoringModule,
+    LlmModule,
   ],
   controllers: [AppController],
   providers: [AppService],

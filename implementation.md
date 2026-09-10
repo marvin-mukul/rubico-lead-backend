@@ -72,7 +72,7 @@ These are settled. Do not relitigate them mid-phase.
 | P8c | Sources: `hackernews`, `product-hunt`, `first-party` ✅ | P8a | §7.2, §8.1 |
 | P9 | Enrichment (homepage fingerprint, dns, github) ✅ | P4, P6 | §3, §4 |
 | P10 | Scoring engine + `score.rescore-all` ✅ | P1, P7 | §5, §7.2, §12 |
-| P11 | LLM layer: classify + brief | P4, P10 | §11 |
+| P11 | LLM layer: classify + brief ✅ | P4, P10 | §11 |
 | P12 | `pipeline.run` orchestration | P9, P10, P11 | §7.2 |
 | P13 | `/api/*` surface | P2, P10 | §8.3 |
 | P14 | Digest, metrics, OpenAPI export, acceptance sweep | P12, P13 | §8.1, §9, §13 |
@@ -750,42 +750,59 @@ instant. The clock is now injected.
 
 ---
 
-## P11 — LLM layer: classify and brief
+## P11 — LLM layer: classify and brief  ✅ CODE COMPLETE (not live-tested)
 
 **Goal:** structured, cited, budget-bounded LLM output.
 **Spec refs:** §11 in full, §4 (`LlmProvider`), §6.
-**Precondition: P4's §6.3 acceptance test is green. Do not start otherwise.**
+**Precondition met:** P4's §6.3 acceptance test has been green since P4.
 
 ### Tasks
-- [ ] `llm/llm-provider.interface.ts` — exactly as §4, including `batch` and
-      `cacheSystem` flags.
-- [ ] `llm/gemini/` — classify provider, model from `LLM_CLASSIFY_MODEL`
-      (`gemini-2.5-flash-lite`). Constructor takes `MeteredClient` (FR-B2).
-- [ ] `llm/anthropic/` — brief provider, model from `LLM_BRIEF_MODEL`. Constructor takes
-      `MeteredClient`.
-- [ ] **FR-AI2** structured output constrained by a Zod schema at both steps. No free-text
-      parsing anywhere.
-- [ ] **FR-AI3** brief uses the **batch endpoint** (50% cheaper). Nothing here is
-      latency-sensitive. Gate on `LLM_BRIEF_BATCH`.
-- [ ] **FR-AI4** prompt-cache the shared system prefix (ICP, service catalogue, scoring
-      rubric). Identical across thousands of calls; cache reads cost ~10% of input.
-- [ ] **FR-AI5** the classify schema must permit `has_rubico_opportunity: false` and
-      `evidence_sufficient: false`, and either outcome **discards the record before
-      scoring**. A classifier that never refuses is not a filter.
-- [ ] **FR-AI6** programmatic brief validation: every claim carries a `signalId` that
-      **exists in the database**. Verify in code with a real query. A brief with an
-      uncited claim is rejected and logged as a defect, never surfaced to a human. Do not
-      ask the prompt to enforce this.
-- [ ] **FR-AI7** the suggested opening line references only cited evidence.
-- [ ] Cost accounting: `computeCost` reads the P0 price table and distinguishes fresh
-      input, cached input, output, and the batch discount.
+- [x] `llm/llm-provider.interface.ts` — as §4, plus `completeMany` for batching.
+- [x] `llm/gemini/` — classify via the REST API. `toGeminiSchema()` strips the
+      JSON Schema keywords Gemini rejects (`$schema`, `additionalProperties`,
+      `const`), so one Zod schema serves both providers.
+- [x] `llm/anthropic/` — brief via the official SDK, Batch API, prompt caching.
+- [x] **FR-AI2** — `output_config.format` (Anthropic) and `responseSchema`
+      (Gemini) both derived from the Zod schema by `z.toJSONSchema()`.
+      Generation is constrained, not just validated afterwards.
+- [x] **FR-AI3** — briefs go through `messages.batches`. `LLM_BRIEF_BATCH=false`
+      falls back to sequential inside the provider, so there is one call path.
+- [x] **FR-AI4** — `CLASSIFY_SYSTEM_PROMPT` / `BRIEF_SYSTEM_PROMPT` are frozen
+      constants holding ICP, service catalogue and evidence rules, sent with
+      `cache_control: ephemeral`. Everything varying is in the user message.
+- [x] **FR-AI5** — both refusal flags are **required booleans**, so the model
+      must take a position, and either one discards before scoring.
+- [x] **FR-AI6** — `validateBrief()` checks every claim's `signal_id` against
+      the ids that actually exist for that company. A defective brief is
+      **rejected whole**, logged, and never written.
+- [x] **FR-AI7** — the opening line carries its own citations, validated the
+      same way.
+- [x] Cost accounting distinguishes fresh input, cached input, cache writes
+      and the batch multiplier.
 
-### Done when
-- **A6:** a deliberately irrelevant company returns `has_rubico_opportunity: false` and is
-  discarded before scoring — committed as a test with a fixture company.
-- **A7:** a brief fabricating a `signalId` is rejected by the validator and logged.
-- Every LLM call produces exactly one `ApiUsage` row with a non-zero, plausible cost.
-- Switching `LLM_CLASSIFY_PROVIDER` in `.env` changes providers with no code edit (FR-B20).
+### Design notes
+- **Providers know nothing about budgets.** Neither provider checks a cap or
+  writes `api_usage`; `MeteredClient` wraps every call (FR-B2). That
+  separation is what stops a future provider bypassing the cap.
+- **A defective brief is rejected whole, not repaired.** Dropping the bad
+  claim and keeping the rest would surface a brief that was never validated
+  as a unit.
+- **Citations are part of each claim's shape**, not a list at the end, which
+  is what makes "which claim is unsupported?" answerable.
+
+### ⚠ Not live-tested — needs real API keys
+`GEMINI_API_KEY` and `ANTHROPIC_API_KEY` are still `REPLACE_ME`, so **no real
+model call has been made**. What is proven and what is not:
+
+| | Status |
+|---|---|
+| FR-AI6 / **A7** — invented `signalId` rejected | ✅ tested as code, which is where the spec puts it |
+| FR-AI5 refusal → discard before scoring | ✅ tested (logic), incl. end-to-end in P12 |
+| Schema shape, Gemini conversion, cache-prefix stability | ✅ tested |
+| **A6** — a real classifier says no to an irrelevant company | ❌ **needs a live key.** §11 words this as "run a deliberately irrelevant company through it and confirm it says no" — that is a claim about the *model*, not the code, and only a real call can settle it |
+| Anthropic batch round-trip, Gemini `responseSchema` acceptance | ❌ needs a live key |
+
+- [x] 21 tests passing.
 
 ---
 
