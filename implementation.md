@@ -61,7 +61,7 @@ These are settled. Do not relitigate them mid-phase.
 |---|---|---|---|
 | P0 | Foundation, config, bootstrap hardening ✅ | — | §2, §10 |
 | P1 | Data model + first migration ✅ | P0 | §5 |
-| P2 | Auth guards + idempotency interceptor | P0, P1 | §8.1, §8.3 |
+| P2 | Auth guards + idempotency interceptor ✅ | P0, P1 | §8.1, §8.3 |
 | P3 | Notifications (Notifier → n8n) | P0 | §8.2 |
 | P4 | **Metering & cost enforcement** | P1, P3 | §6 |
 | P5 | Job runner + `/internal/jobs/*` + health | P1, P2, P3 | §7, §8.1 |
@@ -217,30 +217,82 @@ are written.
 
 ---
 
-## P2 — Auth guards and idempotency
+## P2 — Auth guards and idempotency  ✅ COMPLETE
 
 **Goal:** three auth models exist as guards before any route needs them.
 **Spec refs:** §8.1, §8.3, §7.1 (FR-B7).
 
 ### Tasks
-- [ ] `common/auth/internal-token.guard.ts` — reads `X-Internal-Token`, compares against
-      `INTERNAL_API_TOKEN` with `crypto.timingSafeEqual` on equal-length buffers. Reject
-      length mismatch *before* comparing, without leaking timing.
-- [ ] `common/auth/session.guard.ts` — `Authorization: Bearer <token>`. Phase 0 is a
-      single shared credential; sign a stateless token with `SESSION_SECRET` (HMAC or
-      `jose`-signed JWT) rather than storing sessions.
-- [ ] `common/auth/session.service.ts` — issue/verify token; verify
-      `DASHBOARD_PASSWORD_HASH` with argon2 (`npm i argon2`).
-- [ ] `common/idempotency/idempotency.interceptor.ts` — requires `X-Idempotency-Key` on
-      the routes that declare it. On a key already present in `job_runs`, return the
-      existing run instead of starting a new one (FR-B7).
-- [ ] Decorators: `@InternalOnly()`, `@SessionAuth()`, `@RequireIdempotencyKey()`.
+- [x] `common/auth/safe-compare.ts` — constant-time comparison. Both inputs are
+      SHA-256 digested before `timingSafeEqual`, so the comparison is constant-time
+      **and** length-independent. An early `a.length !== b.length` return would be
+      simpler but leaks the secret's length through timing.
+- [x] `common/auth/internal-token.guard.ts` — `X-Internal-Token` vs
+      `INTERNAL_API_TOKEN` (§8.1).
+- [x] `common/auth/session.service.ts` — argon2id via `@node-rs/argon2`
+      (prebuilt binaries; the native `argon2` package needs an install script,
+      which this npm blocks). Stateless HMAC-SHA256 token: `v1.<payload>.<sig>`,
+      12-hour TTL, keyed on `SESSION_SECRET`.
+- [x] `common/auth/session.guard.ts` — `Authorization: Bearer <token>`, attaches
+      `request.sessionClaims`.
+- [x] `common/idempotency/idempotency.interceptor.ts` — requires and validates
+      `X-Idempotency-Key` (8–255 printable non-whitespace chars).
+- [x] `common/idempotency/idempotency.service.ts` — `claim()`, the atomic FR-B7
+      guarantee.
+- [x] Decorators: `@InternalOnly()`, `@SessionAuth()`, `@CurrentSession()`,
+      `@RequireIdempotencyKey()`, `@IdempotencyKey()`.
+- [x] `AuthModule` and `IdempotencyModule` are `@Global()` and wired into `AppModule`.
+- [x] `npm run auth:hash -- '<password>'` generates a `DASHBOARD_PASSWORD_HASH`.
+
+### Design decision: the interceptor does NOT short-circuit
+The P2 plan said the interceptor should look the key up in `job_runs` and return
+the existing run. It doesn't, deliberately: two concurrent n8n retries would both
+miss that read and both proceed. The real guarantee is the **unique constraint on
+`job_runs.idempotency_key`**, enforced by `IdempotencyService.claim()`, which
+catches Prisma's `P2002` and returns the winning row. The interceptor validates
+the header and attaches it; the service is the decision point. P5's runner must
+call `claim()` — not re-read the key itself.
+
+### Honest limitation: logout cannot revoke
+Tokens are stateless, so `POST /api/auth/logout` (§8.3) can only tell the client
+to discard its token — the token stays valid until it expires. Real revocation
+needs a denylist table, which Phase 0 does not justify with one shared credential.
+P13 should implement logout as a 204 and not pretend otherwise.
+
+### ⚠ Two problems this phase surfaced
+1. **`config/index.js` is side-effectful.** `ConfigModule.forRoot({ validate })`
+   runs at *import* time (it is evaluated as a decorator argument), so importing
+   the barrel anywhere validates the entire real environment — which broke unit
+   tests. Fixed: `internal-token.guard.ts`, `session.service.ts` and
+   `prisma.service.ts` now import `AppConfigService` from the leaf
+   `config/app-config.service.js`. **Later phases must do the same** — never import
+   `common/config/index.js` from inside `src/`.
+2. **Prisma 7 model types are suffixed `Model`** — the type is `JobRunModel`, not
+   `JobRun`, exported from `generated/prisma/models.js`. Every later phase that
+   types a Prisma row hits this.
 
 ### Done when
-- Unit test: wrong/absent internal token → 401; correct → passes.
-- Unit test: bad password → 401; good password → token that `session.guard` accepts.
-- Integration test: two POSTs with the same `X-Idempotency-Key` produce **one** `job_runs`
-  row (this is the §12 idempotency test — write it here, it will be exercised in P5).
+- [x] Unit test: wrong/absent/prefix/empty internal token → 401; correct → passes.
+- [x] Unit test: bad password, wrong email, and a malformed stored hash all → 401
+      (fails closed, not a 500); good password → a token `session.guard` accepts.
+- [x] Unit test: tampered payload, tampered signature, foreign secret, expired,
+      and malformed tokens are all rejected.
+- [x] **Integration test (§12)**: same `X-Idempotency-Key` twice → one `job_runs`
+      row; **8 concurrent claims of one key → exactly 1 created, 1 row**. Tests
+      clean up after themselves.
+- [x] Runtime smoke test against the real `.env`: DI resolves every guard, the
+      internal token guard accepts the configured token and rejects others, and
+      `login()` against the real argon2 hash issues a token the session guard accepts.
+- [x] `npm run build`, `npm run lint`, `npm test` (28 tests) all pass.
+
+### Carried into later phases
+- `.env` now holds a real argon2id `DASHBOARD_PASSWORD_HASH` for the dev password
+  **`ChangeMe-Dev-2026!`** — change it before anything is deployed:
+  `npm run auth:hash -- 'new-password'`.
+- `vitest.config.ts` now loads `dotenv/config` via `setupFiles`, so integration
+  tests get `DATABASE_URL`.
+- Test helpers live in `test/support/` (`config.factory.ts`,
+  `execution-context.ts`); excluded from the build.
 
 ---
 
@@ -666,7 +718,7 @@ Five test groups. No HTTP-layer tests, no e2e, no coverage target.
 | `dedupeHash` unit tests | P7 | ☐ |
 | Fit filter unit tests | P6 | ☐ |
 | `MeteredClient` integration test (§6.3) | P4 | ☐ |
-| Idempotency integration test | P2 / P5 | ☐ |
+| Idempotency integration test | P2 | ✅ |
 
 ---
 
