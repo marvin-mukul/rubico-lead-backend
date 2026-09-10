@@ -9,5 +9,7 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
+    // Integration tests (e.g. idempotency) need DATABASE_URL from .env.
+    setupFiles: ['dotenv/config'],
   },
 });
