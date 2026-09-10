@@ -56,6 +56,46 @@ const SCORING_DEFAULTS: Record<string, number> = {
 
   // FR-SC4: no event signal newer than this → band `ignore`, whatever the fit.
   'scoring.eventSignalFreshnessDays': 30,
+
+  // ── Fit filter (parent spec §4.1) ────────────────────────────────────────
+  // Every ICP rule is config, never code. scoring_config.value is a Float, so
+  // list-shaped rules are one key per value. An attribute with no key scores
+  // its dimension's `.default`.
+  //
+  // PROVISIONAL: the real ICP lives in the parent spec. These express a
+  // plausible shape — mid-market, English-speaking, software-adjacent — so the
+  // filter is exercisable end to end.
+  'fit.minScore': 40,
+
+  'fit.headcount.default': 0,
+  'fit.headcount.1-10': 2,
+  'fit.headcount.11-50': 15,
+  'fit.headcount.51-200': 25,
+  'fit.headcount.201-500': 20,
+  'fit.headcount.501-1000': 10,
+  'fit.headcount.1000': 5,
+
+  'fit.region.default': 0,
+  'fit.region.emea': 15,
+  'fit.region.namer': 20,
+  'fit.region.apac': 8,
+
+  'fit.country.default': 0,
+  'fit.country.us': 10,
+  'fit.country.gb': 10,
+  'fit.country.in': 8,
+  'fit.country.ae': 8,
+
+  'fit.industry.default': 0,
+  'fit.industry.saas': 20,
+  'fit.industry.fintech': 18,
+  'fit.industry.ecommerce': 15,
+  'fit.industry.healthcare': 12,
+  'fit.industry.logistics': 12,
+
+  // Bonuses, not dimensions: both are evidence of a real modernisation need.
+  'fit.signal.legacyStack': 15,
+  'fit.signal.atsPresent': 5,
 };
 
 async function main(): Promise<void> {

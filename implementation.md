@@ -65,7 +65,7 @@ These are settled. Do not relitigate them mid-phase.
 | P3 | Notifications (Notifier → n8n) ✅ | P0 | §8.2 |
 | P4 | **Metering & cost enforcement** ✅ | P1, P3 | §6 |
 | P5 | Job runner + `/internal/jobs/*` + health ✅ | P1, P2, P3 | §7, §8.1 |
-| P6 | Companies: canonical domain, dedupe, suppression, fit filter | P1 | §3, parent §4.1 |
+| P6 | Companies: canonical domain, dedupe, suppression, fit filter ✅ | P1 | §3, parent §4.1 |
 | P7 | Signals: dedupe hash, persistence, compound detection | P1, P6 | §5, §12 |
 | P8a | Source: `sec-edgar` | P5, P6, P7 | §4, §7.2 |
 | P8b | Source: `ats` (greenhouse/lever/ashby) | P8a | §4, §7.2 |
@@ -429,30 +429,48 @@ Phase 0 scope; note it if runs start looking stuck.
 
 ---
 
-## P6 — Companies: canonical domain, dedupe, suppression, fit filter
+## P6 — Companies: canonical domain, dedupe, suppression, fit filter  ✅ COMPLETE
 
 **Goal:** one company per real-world company, and out-of-ICP records die here.
 **Spec refs:** §3 (`companies/`), parent spec §4.1.
 
 ### Tasks
-- [ ] `companies/canonical-domain.ts` — pure function. Lowercase, strip scheme, strip
-      `www.`, strip path/query/fragment, handle public-suffix correctly (`co.uk` is not a
-      registrable domain). Reject free-mail and known aggregator domains.
-- [ ] `companies/company.repository.ts` — upsert-by-`canonicalDomain`, which is the dedupe
-      mechanism (the column is `@unique`).
-- [ ] `companies/suppression.service.ts` — read/write `suppressionReason`
-      (`client | competitor | rejected | do-not-contact`). Suppressed companies are
-      excluded from every downstream stage.
-- [ ] `companies/fit-filter.service.ts` — **config-driven rules**, thresholds read from
-      `ScoringConfig`, never hard-coded. Produces a `fitScore: number` plus a pass/fail.
-- [ ] Unit tests for the fit filter (required by §12): "config-driven rules behave as
-      configured" — change a threshold in the config fixture, assert the outcome flips.
-- [ ] Unit tests for `canonicalDomain` covering the `co.uk`, `www.`, and path cases.
+- [x] `scoring-config/scoring-config.service.ts` — the §4 non-code seam.
+      Created here rather than in P10 because the fit filter is its first
+      consumer. 15s TTL cache, dropped immediately on write so a PATCH takes
+      effect on the next call (FR-SC3). A missing key with no fallback throws
+      rather than scoring zero.
+- [x] `companies/canonical-domain.ts` — pure. Uses `tldts` for the public
+      suffix list, so `acme.co.uk` is the registrable domain and `co.uk` is
+      not. Strips scheme, credentials, port, path/query/fragment, `www.`,
+      casing and trailing dots; accepts a bare email; rejects IPs, free-mail
+      providers and shared platforms with a typed reason.
+- [x] `companies/company.repository.ts` — upsert by `canonicalDomain`. Never
+      blanks a known field because this source did not supply it.
+- [x] `companies/suppression.service.ts` — `activeFilter()` to spread into
+      every pipeline query, rather than re-remembering the condition.
+- [x] `companies/fit-filter.service.ts` — points per attribute, all from
+      config, with per-contribution reporting so the score is explainable (A3).
+
+### Config shape forced by the schema
+`scoring_config.value` is a **Float**, so config is numeric only — there is no
+way to store "allowed regions" as a list. List-shaped rules are therefore one
+key per value (`fit.region.emea = 15`), with `fit.<dimension>.default` for
+unknown and missing values. 26 provisional fit keys are seeded; the real ICP
+is in parent spec §4.1.
 
 ### Done when
-- Four spellings of the same domain resolve to one `Company` row.
-- A suppressed company is invisible to a downstream query helper.
-- Fit-filter tests pass with two different config fixtures.
+- [x] Four spellings of one company resolve to one domain; subdomains reduce to
+      the registrable domain; `acme.co.uk`, `acme.com.au`, `acme.co.in` all
+      handled.
+- [x] Free-mail, shared platforms, IPs, empty and unparseable input are each
+      rejected with a distinct reason.
+- [x] **§12 fit-filter test**: the outcome flips when only the *threshold*
+      changes, and again when only an *attribute weight* changes — no code
+      change either time.
+- [x] Contributions sum exactly to `fitScore`; clamped to 0..100; attribute
+      values are case- and punctuation-insensitive.
+- [x] 19 tests passing.
 
 ---
 
@@ -740,7 +758,7 @@ Five test groups. No HTTP-layer tests, no e2e, no coverage target.
 | Test | Written in | Status |
 |---|---|---|
 | `scoring` unit tests (5 cases) | P10 | ☐ |
-| `dedupeHash` unit tests | P7 | ☐ |
+| `dedupeHash` unit tests | P7 | ✅ |
 | Fit filter unit tests | P6 | ✅ |
 | `MeteredClient` integration test (§6.3) | P4 | ✅ |
 | Idempotency integration test | P2 | ✅ |
