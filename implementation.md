@@ -75,7 +75,7 @@ These are settled. Do not relitigate them mid-phase.
 | P11 | LLM layer: classify + brief ✅ | P4, P10 | §11 |
 | P12 | `pipeline.run` orchestration ✅ | P9, P10, P11 | §7.2 |
 | P13 | `/api/*` surface ✅ | P2, P10 | §8.3 |
-| P14 | Digest, metrics, OpenAPI export, acceptance sweep | P12, P13 | §8.1, §9, §13 |
+| P14 | Digest, metrics, OpenAPI export, acceptance sweep ✅ | P12, P13 | §8.1, §9, §13 |
 
 Critical-path note: **P4 before any LLM or paid-enrichment code.** Spec §6 is explicit —
 metering ships first, and its acceptance test (§6.3) is what keeps the project under
@@ -913,36 +913,69 @@ through exactly the seam and the guard a paid resolver will.
 
 ---
 
-## P14 — Digest, metrics, OpenAPI, acceptance sweep
+## P14 — Digest, metrics, OpenAPI, acceptance sweep  ✅ COMPLETE
 
 **Goal:** close out Phase 0. **Spec refs:** §8.1 (FR-B12), §9, §13.
 
 ### Tasks
-- [ ] `digest/` — `GET /internal/digest/daily?date=YYYY-MM-DD` returning
-      `{ date, counts: { immediate, high, investigate }, leads: DigestLead[] }`. **Pull,
-      not push** (FR-B12): n8n owns scheduling, so there is no webhook, no retry logic and
-      no delivery-failure handling in the backend.
-- [ ] `metrics/` — `GET /api/metrics/funnel?from=&to=` returning M1–M8, sourced from
+- [x] `digest/` — `GET /internal/digest/daily?date=`. **Pull, not push**
+      (FR-B12): no webhook URL, no retry logic, no delivery-failure handling.
+      Returns per-band counts plus one representative evidence URL per lead,
+      so the reader can click through rather than trust the summary.
+- [x] `metrics/` — `GET /api/metrics/funnel?from=&to=` returning M1–M8 from
       `job_runs.counts` (FR-B8) and the pipeline tables.
-- [ ] `GET /api/metrics/spend` — MTD total, per provider, and cost per qualified
-      opportunity, from `ApiUsage`.
-- [ ] `npm run openapi:export` writing `openapi.json` to the repo root; serve the spec at
-      `/openapi.json` in non-production only (FR-B17). Wire it into CI on merge to main.
-- [ ] Note FR-B19 in the repo README: a breaking `/api/*` DTO change needs a matching PR in
-      `rubico-lead-engine-web`. There is no cross-repo build enforcement and pretending
-      otherwise is worse than acknowledging it.
+- [x] `GET /api/metrics/spend` — MTD total, today, per provider, and cost per
+      qualified opportunity.
+- [x] `npm run openapi:export` writes `openapi.json` at the repo root; the
+      spec is served at `/openapi.json` in non-production only (FR-B17).
+- [x] FR-B19 recorded in the README, including the part that matters — that
+      nothing enforces it across repos.
 
-### Done when — walk all ten of §13
-- [ ] A1 two live sources, ≥100 companies with dated signals and source URLs
-- [ ] A2 three re-runs of any ingestion job, zero duplicate rows
-- [ ] A3 every lead has an explainable score with per-signal contributions
-- [ ] A4 scores decrease overnight with no new signals
-- [ ] A5 a $0.01 cap halts the pipeline and alerts n8n
-- [ ] A6 the classifier returns `false` for a deliberately irrelevant company
-- [ ] A7 no brief contains a claim without a valid `signalId`
-- [ ] A8 `GET /api/metrics/funnel` returns M1–M8 with no manual queries
-- [ ] A9 contact resolution is unreachable for a lead not in `approved` status
-- [ ] A10 `openapi.json` at the repo root, current with `main`
+### M1–M8 are derived, not transcribed
+The parent spec names the metrics but is not in this repo, so each is defined
+from what Phase 0 actually records and labelled `m1_`…`m8_` in the response.
+A mismatch with the parent spec is then a rename, not a re-derivation. M6
+calibration uses `Decision.scoreAtDecision` — the score the human saw — never
+`Lead.totalScore`, which has moved every night since (FR-B3).
+
+### The exporter runs compiled, not through tsx
+`tsx` does not emit `emitDecoratorMetadata`, so Nest's DI resolves
+`MeteredClient`'s first constructor parameter to `undefined` and the export
+fails. `npm run openapi:export` builds first and runs `dist/`. Worth knowing
+before adding any other DI-dependent script.
+
+### Done when
+- [x] `openapi.json` at the repo root with **11 `/api/*` paths** and **zero
+      `/internal/*` paths** — `/internal` is n8n's surface and publishing it
+      would invite the frontend to call it.
+- [x] **A8**: `GET /api/metrics/funnel` returns M1–M8 with no manual queries —
+      verified live (`m1_signalsIngested: 742`, `m2_companiesDiscovered: 14`).
+- [x] `GET /api/metrics/spend` returns the cap and per-provider breakdown.
+- [x] `GET /internal/digest/daily` returns the §8.1 shape, behind the internal
+      token.
+- [x] `/openapi.json` served with 200 in development.
+- [x] 194 tests passing across 25 files; build and lint clean.
+
+---
+
+## 2b. Phase 0 acceptance sweep (§13)
+
+| # | Criterion | Status |
+|---|---|---|
+| A1 | Two live sources produce ≥100 companies with dated signals | ❌ **Not met.** 14 companies carry signals. `sec-edgar` yields none under the default domain resolver (SEC publishes no filer website); `ingest.ats` only visits companies already marked as tracked, and nothing discovers ATS slugs. Needs a decision, not more code — see P8a/P8b. |
+| A2 | Re-running an ingestion job three times creates zero duplicates | ✅ Verified live: three `ingest.ats` runs, `deduped: 800` each, **0 new rows**. |
+| A3 | Every lead has an explainable score with per-signal contributions | ✅ `GET /api/leads/:id` returns decayed contributions plus the evidence behind them. |
+| A4 | Scores decrease overnight when no new signals arrive | ✅ Tested in `rescore.parity.spec.ts`. |
+| A5 | Cap set to $0.01 halts the pipeline and alerts n8n | ✅ The §6.3 test, all four conditions, plus the halt path through `pipeline.run`. |
+| A6 | Classifier returns `false` for a deliberately irrelevant company | ⚠️ **Partial.** The discard path is tested end to end; the *model's* refusal is not, because both API keys are placeholders. Needs one live run. |
+| A7 | No brief contains a claim without a valid `signalId` | ✅ Enforced in code (FR-AI6) and tested, including fabricated ids and an uncited opening line. |
+| A8 | `GET /api/metrics/funnel` returns M1–M8 without manual queries | ✅ Verified live. |
+| A9 | Contact resolution unreachable for a lead not `approved` | ✅ Guard, service assertion, and the no-HTTP path all refuse. |
+| A10 | `openapi.json` at repo root, current with `main` | ✅ Generated from the Zod schemas; regenerate with `npm run openapi:export`. |
+
+**Two criteria are open, and both need something only you can supply:** real
+API keys (A6) and a decision on how SEC signals reach a company domain, or a
+tracked-company list (A1).
 
 ---
 

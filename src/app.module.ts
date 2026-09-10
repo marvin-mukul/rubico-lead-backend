@@ -9,7 +9,9 @@ import { MeteringModule } from './common/metering/index.js';
 import { PrismaModule } from './common/prisma/index.js';
 import { PipelineModule } from './pipeline/index.js';
 import { CompaniesModule } from './companies/index.js';
+import { DigestModule } from './digest/index.js';
 import { EnrichmentModule } from './enrichment/index.js';
+import { MetricsModule } from './metrics/index.js';
 import { JobsModule } from './jobs/index.js';
 import { LlmModule } from './llm/index.js';
 import { NotificationsModule } from './notifications/index.js';
@@ -36,6 +38,8 @@ import { SourcesModule } from './sources/index.js';
     LlmModule,
     PipelineModule,
     ApiModule,
+    DigestModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
