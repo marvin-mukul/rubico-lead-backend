@@ -63,7 +63,7 @@ These are settled. Do not relitigate them mid-phase.
 | P1 | Data model + first migration ✅ | P0 | §5 |
 | P2 | Auth guards + idempotency interceptor ✅ | P0, P1 | §8.1, §8.3 |
 | P3 | Notifications (Notifier → n8n) ✅ | P0 | §8.2 |
-| P4 | **Metering & cost enforcement** | P1, P3 | §6 |
+| P4 | **Metering & cost enforcement** ✅ | P1, P3 | §6 |
 | P5 | Job runner + `/internal/jobs/*` + health | P1, P2, P3 | §7, §8.1 |
 | P6 | Companies: canonical domain, dedupe, suppression, fit filter | P1 | §3, parent §4.1 |
 | P7 | Signals: dedupe hash, persistence, compound detection | P1, P6 | §5, §12 |
@@ -322,42 +322,57 @@ P13 should implement logout as a 204 and not pretend otherwise.
 
 ---
 
-## P4 — Metering and cost enforcement  ⚠ build before any LLM code
+## P4 — Metering and cost enforcement  ✅ COMPLETE
 
 **Goal:** a single choke point that makes overspending structurally impossible.
 **Spec refs:** §6 in full (FR-C1, C2, C3, C4, C5, C9).
 
 ### Tasks
-- [ ] `common/metering/metered-client.ts` implementing the `call()` signature in §6.1
-      exactly: `{ provider, operation, leadId, estimatedCost, execute, computeCost }`.
-- [ ] Implement the six behaviours **in the order §6.1 lists them**:
-      1. Reject if MTD spend for `provider` ≥ its hard cap (FR-C2).
-      2. Reject if `leadId` has already consumed ≥ `PER_LEAD_BUDGET_USD` pre-approval (FR-C4).
-      3. If MTD spend ≥ 80% of the daily budget, reject unless the lead's band is
-         `immediate` or `high` (FR-C3).
-      4. Execute.
-      5. Write `ApiUsage` with the **actual** computed cost, not the estimate (FR-C1).
-      6. On a step-1 rejection: fire `cost.cap_breached` (§8.2) **and** mark the job run
-         `failed`.
-- [ ] `common/metering/spend.repository.ts` — MTD-per-provider and per-lead spend queries
-      against `ApiUsage`, aggregated in SQL not in JS.
-- [ ] Define distinct error classes (`CapBreachedError`, `LeadBudgetExceededError`,
-      `DailyBudgetGuardError`) so the job runner can report a readable `error`.
-- [ ] `common/metering/contact-resolution.guard.ts` — FR-C5: reject unless
-      `lead.status === 'approved'`. Implement **both** the route guard *and* the assertion
-      inside the service. Not one or the other — the service will later be called from a
-      job as well as a route.
+- [x] `common/domain/index.ts` — shared string unions (`SignalType`, `LeadBand`,
+      `LeadStatus`, `JobStatus`, `SuppressionReason`, `DecisionReasonCode`).
+      Added here because metering needs bands; used by every later phase.
+- [x] `common/metering/metering.errors.ts` — `CapBreachedError`,
+      `LeadBudgetExceededError`, `DailyBudgetGuardError`, `UnpricedCallError`.
+- [x] `common/metering/spend.repository.ts` — MTD per provider, MTD total,
+      today, per lead, per-provider breakdown. All aggregated in SQL. Period
+      boundaries are UTC.
+- [x] `common/metering/metered-client.ts` — the §6.1 order, exactly.
+- [x] `common/metering/contact-resolution.policy.ts` + `.guard.ts` — FR-C5 as
+      **one** implementation used by both the route guard and the service
+      assertion, so they cannot drift apart.
 
-### Done when — this is acceptance criterion A5, do not skip it
-Run the §6.3 test explicitly:
-- [ ] Set `GEMINI_MONTHLY_CAP_USD=0.01` and run a pipeline that makes a metered call.
-- [ ] 1. The pipeline halts.
-- [ ] 2. A `cost.cap_breached` payload reaches the n8n alert webhook.
-- [ ] 3. `job_runs.status = 'failed'` with a human-readable error.
-- [ ] 4. No further metered calls execute until the cap is raised.
-- [ ] Committed as an automated integration test (§12), not a manual check.
+### ⚠ Two deviations, both deliberate
+1. **FR-C3 reads "MTD spend ≥ 80% of the daily budget"** — a month-to-date
+   figure compared against a *daily* budget. Taken literally that trips
+   permanently a day or two into every month and halts all non-priority work
+   forever. Implemented as **today's spend vs. the daily budget**, which is
+   plainly the intent. Flagged in a comment at the check.
+2. **`computeCost` receives the whole result, not just `usage`.** §6.1 writes
+   `computeCost: (usage) => ...`; for an `LlmProvider` the result *is*
+   `{ result, usage }`, so this is the same value plus room for providers that
+   bill in credits or requests rather than tokens.
 
-Until this test is green, do not open P11.
+### 🐛 Bug the acceptance test caught
+`1.5 * 0.8` is `1.2000000000000002` in IEEE-754, so a daily budget spent to
+exactly `$1.20` slipped past its own 80% threshold. All three money
+comparisons now go through `atOrAbove()` with a 1e-9 tolerance. The same class
+of error would have let a provider sit exactly on its hard cap and keep
+spending.
+
+### Done when — acceptance criterion A5
+- [x] `GEMINI_MONTHLY_CAP_USD=0.01` with $0.011 already spent:
+      **1.** the call is refused and `execute` never runs;
+      **2.** a `cost.cap_breached` payload with the §8.2 shape reaches the notifier;
+      **3.** `job_runs.status = 'failed'` with a readable error and `finishedAt` set;
+      **4.** two further attempts are also refused, and `api_usage` gains no row.
+- [x] Raising the cap resumes spending — the halt is not sticky state.
+- [x] A provider with no override falls back to `MONTHLY_CAP_USD`.
+- [x] FR-C1: `api_usage` records the ACTUAL computed cost, not the estimate.
+- [x] FR-C4: an unapproved lead at its budget is refused; an **approved** lead
+      is not, because the human has taken the decision.
+- [x] FR-C3: `investigate` is refused at the threshold; `immediate` and `high`
+      pass.
+- [x] 9 tests passing.
 
 ---
 
