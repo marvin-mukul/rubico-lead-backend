@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { ApiModule } from './api/index.js';
 import { AuthModule } from './common/auth/index.js';
 import { AppConfigModule } from './common/config/index.js';
 import { IdempotencyModule } from './common/idempotency/index.js';
@@ -34,6 +35,7 @@ import { SourcesModule } from './sources/index.js';
     ScoringModule,
     LlmModule,
     PipelineModule,
+    ApiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
