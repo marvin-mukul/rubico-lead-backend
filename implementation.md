@@ -18,7 +18,7 @@ listed under `requirement.md` §14 (Explicitly out of scope).
 |---|---|
 | NestJS 12, Express adapter | installed |
 | TypeScript strict, ESM (`"type": "module"`, `moduleResolution: nodenext`) | configured |
-| `@prisma/client` 7 + `prisma` 7 | installed, **no `prisma/schema.prisma` yet** |
+| `@prisma/client` 7 + `prisma` 7 + `@prisma/adapter-pg` + `pg` | schema, init migration and seed done in P1 |
 | `prisma.config.ts` | exists (skills only) |
 | vitest (unit + e2e configs), oxlint, prettier | configured |
 | `src/` | Nest starter only (`app.module`, `app.controller`, `app.service`) |
@@ -60,7 +60,7 @@ These are settled. Do not relitigate them mid-phase.
 | # | Phase | Depends on | Spec refs |
 |---|---|---|---|
 | P0 | Foundation, config, bootstrap hardening ✅ | — | §2, §10 |
-| P1 | Data model + first migration | P0 | §5 |
+| P1 | Data model + first migration ✅ | P0 | §5 |
 | P2 | Auth guards + idempotency interceptor | P0, P1 | §8.1, §8.3 |
 | P3 | Notifications (Notifier → n8n) | P0 | §8.2 |
 | P4 | **Metering & cost enforcement** | P1, P3 | §6 |
@@ -136,34 +136,84 @@ $25/month. P3 comes before P4 only because the cap breach must fire a notificati
 
 ---
 
-## P1 — Data model and first migration
+## P1 — Data model and first migration  ✅ COMPLETE
 
-**Goal:** all nine models exist in one migration. **Spec refs:** §5 (FR-B3, FR-B4).
+**Goal:** all eight models exist in one migration. **Spec refs:** §5 (FR-B3, FR-B4).
+
+> **Spec count correction.** §5 opens with "Seven tables… the six from parent spec
+> §10.1 plus `job_runs`", but then defines **eight** models. `ScoringConfig` is the
+> extra — §4 treats it as a non-code seam, so it was likely counted separately.
+> Eight is what the schema implements: Company, Signal, Lead, Contact, Decision,
+> ApiUsage, ScoringConfig, JobRun.
 
 ### Tasks
-- [ ] `prisma/schema.prisma` — copy the nine models from §5 verbatim: `Company`,
-      `Signal`, `Lead`, `Contact`, `Decision`, `ApiUsage`, `ScoringConfig`, `JobRun`.
-      Keep every `@@index` and `@unique` exactly as specified.
-- [ ] Add the `prisma-client` generator block with an explicit `output`, and wire
-      `prisma.config.ts` to point at `prisma/schema.prisma`.
-- [ ] `npx prisma migrate dev --name init` — **one** migration containing everything.
-      FR-B4: retrofitting `api_usage` later means retrofitting every call site.
-- [ ] `src/common/prisma/prisma.service.ts` — extends `PrismaClient`, implements
-      `OnModuleInit`/`OnModuleDestroy`. Global `PrismaModule`.
-- [ ] `prisma/seed.ts` — seed `ScoringConfig` with the S1–S5 weights, half-lives,
-      `compound.bonus`, and the fit-filter thresholds. Keys use the dotted form from §5
-      (`'S1.weight'`, `'S1.halfLifeDays'`, `'compound.bonus'`).
-- [ ] Add npm scripts: `db:migrate`, `db:seed`, `db:studio`, `db:reset`.
+- [x] `prisma/schema.prisma` — all eight §5 models, every `@@index` and `@unique`
+      preserved verbatim.
+- [x] `prisma-client` generator with `output = "../src/generated/prisma"`,
+      `moduleFormat = "esm"`, `runtime = "nodejs"`. Output must live under `src/`
+      because `tsconfig.build.json` sets `rootDir: ./src`.
+- [x] `prisma.config.ts` rewritten — the scaffolded file called a non-existent
+      `definePrismaConfig` and passed a `skills` key that is not in `PrismaConfig`,
+      so **every** Prisma CLI command was failing before this phase.
+- [x] `npx prisma migrate dev --name init` → one migration,
+      `prisma/migrations/20260910080029_init/`.
+- [x] `src/common/prisma/prisma.service.ts` — extends `PrismaClient`, implements
+      `OnModuleInit`/`OnModuleDestroy`, plus `isHealthy()` for P5's health endpoint.
+      Global `PrismaModule`, wired into `AppModule`.
+- [x] `prisma/seed.ts` — seeds 19 `ScoringConfig` keys. **Existing rows are left
+      untouched**: re-seeding must never reset a weight a human tuned via
+      `PATCH /api/scoring-config` (FR-SC3).
+- [x] npm scripts: `db:generate`, `db:migrate`, `db:migrate:deploy`, `db:seed`,
+      `db:reset` (reset **+ seed**), `db:studio`. `postinstall` is now `prisma generate`.
+
+### ⚠ Prisma 7 facts later phases depend on
+1. **`url` is banned from `datasource`** in the schema. The connection string lives
+   in `prisma.config.ts`, and the runtime client is constructed with a **driver
+   adapter**: `new PrismaClient({ adapter: new PrismaPg({ connectionString }) })`.
+2. **`pg` and `@prisma/adapter-pg` are installed** as a consequence — which means
+   **P5's advisory-lock dependency is already satisfied**. Take the dedicated
+   `pg.Client` for `pg_try_advisory_lock` from that package.
+3. **Prisma 7 does not auto-load `.env`.** `prisma.config.ts` does
+   `import 'dotenv/config'` so CLI and app read the same environment.
+4. Generated client is imported as `../generated/prisma/client.js` (`.js`
+   specifier, `nodenext` resolves it to the `.ts` source). It is gitignored and
+   rebuilt by `postinstall`.
+5. Seeds run through `tsx` (`tsx prisma/seed.ts`) — Node's native type stripping
+   cannot resolve the generated client's `.js` → `.ts` specifiers.
+6. `prisma migrate reset` refuses to run unattended; it requires explicit user
+   consent via `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`.
+7. **`migrate reset` and `migrate dev` no longer auto-run the seed.** Prisma 7
+   removed that (and the `--skip-seed` flag with it); seeding is an explicit
+   `prisma db seed`. `npm run db:reset` chains both so a reset never silently
+   leaves `scoring_config` empty — an empty scoring config would make every
+   downstream score zero with no error.
+
+### Seeded scoring config — PROVISIONAL
+The authoritative weights live in **parent spec §5, which is not in this repo**.
+The 19 seeded values are sane placeholders chosen to satisfy the §12 tests, most
+notably `S1.weight = 25` / `S1.halfLifeDays = 30`, which makes a 180-day funding
+signal contribute `25 × 0.5^6 = 0.39` (< 1, as §12 requires). Replace them when the
+parent spec is to hand. Keys seeded:
+
+- `S1..S5.weight`, `S1..S5.halfLifeDays`, `F-LEG.weight`, `F-LEG.halfLifeDays`
+- `compound.bonus` (10, the §12 cap), `compound.windowDays`, `compound.minDistinctTypes`
+- `band.immediate.min`, `band.high.min`, `band.investigate.min`
+- `scoring.eventSignalFreshnessDays` (30 — FR-SC4)
+
+Fit-filter thresholds are **not** seeded; P6 adds its own keys when the ICP rules
+are written.
 
 ### Done when
-- `npx prisma migrate reset && npm run db:seed` succeeds from empty.
-- `\d+` in psql shows all nine tables with the indexes from §5.
-- `PrismaService` injects cleanly into a throwaway controller and `SELECT 1` works.
-
-### Watch out
-- `Signal.dedupeHash` is `@unique` — that uniqueness *is* the dedupe mechanism (A2). Do
-  not make it a plain index.
-- `Decision.scoreAtDecision` is written at decision time, never derived later (FR-B3).
+- [x] All eight tables plus every §5 index exist in `public` — verified by querying
+      `pg_tables` / `pg_indexes`. `Signal_dedupeHash_key` is a **unique** index
+      (that uniqueness is the A2 dedupe mechanism).
+- [x] `PrismaService` resolves through Nest DI; `SELECT 1` and `isHealthy()` succeed.
+- [x] `npm run db:seed` twice → 19 created, then 0 created / 19 untouched.
+- [x] `npm run build`, `npm run lint`, `npm test` all pass.
+- [x] `npx prisma migrate reset` from empty (run manually by the user) →
+      migration re-applied, 9 tables, 8 non-pkey indexes, then `db:seed` →
+      19 rows. Seeded `S1` values satisfy the §12 constraint: a 180-day funding
+      signal contributes **0.391** (< 1).
 
 ---
 
@@ -286,7 +336,7 @@ runs each query on an arbitrary pooled connection, so a lock taken via `$queryRa
 reliably held — or released — on the same connection for the life of a long job. Pick one
 and write the choice into a comment at the lock site:
 
-- **Recommended:** hold a dedicated `pg.Client` (`npm i pg @types/pg`) for the duration of
+- **Recommended:** hold a dedicated `pg.Client` (`pg` is already installed — P1) for the duration of
   the run, take `pg_try_advisory_lock(hashtext($1))` on it, release in a `finally`.
 - **Alternative:** a partial unique index on `job_runs(jobName) WHERE status = 'running'`,
   letting Postgres reject the second run. Simpler, but diverges from the spec's wording.
