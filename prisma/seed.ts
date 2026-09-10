@@ -49,6 +49,13 @@ const SCORING_DEFAULTS: Record<string, number> = {
   'compound.windowDays': 90,
   'compound.minDistinctTypes': 2,
 
+  // ── Score composition ────────────────────────────────────────────────────
+  // total = fit * fitWeight + intent * intentWeight + compoundBonus, clamped
+  // to 0..100. Fit is 0..100 on its own, so it is halved to leave room for
+  // intent to actually move a lead between bands.
+  'score.fitWeight': 0.5,
+  'score.intentWeight': 1,
+
   // ── Banding ──────────────────────────────────────────────────────────────
   'band.immediate.min': 70,
   'band.high.min': 50,

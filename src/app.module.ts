@@ -11,6 +11,7 @@ import { EnrichmentModule } from './enrichment/index.js';
 import { JobsModule } from './jobs/index.js';
 import { NotificationsModule } from './notifications/index.js';
 import { ScoringConfigModule } from './scoring-config/index.js';
+import { ScoringModule } from './scoring/index.js';
 import { SignalsModule } from './signals/index.js';
 import { SourcesModule } from './sources/index.js';
 
@@ -28,6 +29,7 @@ import { SourcesModule } from './sources/index.js';
     SignalsModule,
     SourcesModule,
     EnrichmentModule,
+    ScoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],
