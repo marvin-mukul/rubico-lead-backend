@@ -7,6 +7,7 @@ import { IdempotencyModule } from './common/idempotency/index.js';
 import { MeteringModule } from './common/metering/index.js';
 import { PrismaModule } from './common/prisma/index.js';
 import { CompaniesModule } from './companies/index.js';
+import { EnrichmentModule } from './enrichment/index.js';
 import { JobsModule } from './jobs/index.js';
 import { NotificationsModule } from './notifications/index.js';
 import { ScoringConfigModule } from './scoring-config/index.js';
@@ -26,6 +27,7 @@ import { SourcesModule } from './sources/index.js';
     CompaniesModule,
     SignalsModule,
     SourcesModule,
+    EnrichmentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

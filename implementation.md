@@ -70,7 +70,7 @@ These are settled. Do not relitigate them mid-phase.
 | P8a | Source: `sec-edgar` ✅ | P5, P6, P7 | §4, §7.2 |
 | P8b | Source: `ats` (greenhouse/lever/ashby) ✅ | P8a | §4, §7.2 |
 | P8c | Sources: `hackernews`, `product-hunt`, `first-party` ✅ | P8a | §7.2, §8.1 |
-| P9 | Enrichment (homepage fingerprint, dns, github) | P4, P6 | §3, §4 |
+| P9 | Enrichment (homepage fingerprint, dns, github) ✅ | P4, P6 | §3, §4 |
 | P10 | Scoring engine + `score.rescore-all` | P1, P7 | §5, §7.2, §12 |
 | P11 | LLM layer: classify + brief | P4, P10 | §11 |
 | P12 | `pipeline.run` orchestration | P9, P10, P11 | §7.2 |
@@ -645,28 +645,55 @@ A1 note below.
 
 ---
 
-## P9 — Enrichment
+## P9 — Enrichment  ✅ COMPLETE
 
 **Goal:** free enrichment that feeds the fit filter and the classifier.
 **Spec refs:** §3, §4 (`Enricher`).
 
 ### Tasks
-- [ ] `enrichment/enricher.interface.ts` — exactly as §4, including
-      `readonly cost: 'free' | 'metered'`.
-- [ ] `enrichment/homepage-fingerprint/` — fetch the homepage, detect modern stack and
-      legacy markers. Writes `Company.detectedStack` and `Company.legacyFlags` (JSONB).
-      Timeout aggressively; a slow site must not stall a run.
-- [ ] `enrichment/dns/` — MX/NS/TXT lookups for hosting and mail-provider inference.
-- [ ] `enrichment/github/` — org/repo activity via `GITHUB_TOKEN`. Free tier, but route it
-      through `MeteredClient` anyway with `cost: 0` so rate usage is visible in `ApiUsage`.
-- [ ] `enrichment/enrichment.service.ts` — runs all registered enrichers, sets
-      `lastEnrichedAt`, tolerates individual enricher failure without failing the record.
-- [ ] Register `maintenance.reverify-legacy` (weekly) to re-check `F-LEG` flags (FR-S5).
+- [x] `enrichment/enricher.interface.ts` — exactly as §4, `cost` declared
+      rather than inferred so a Phase 1 paid enricher is visibly different at
+      the registration site.
+- [x] `enrichment/homepage-fingerprint/` — `fingerprint.ts` is **pure** (HTML +
+      headers in, markers out), so the rules that decide `F-LEG` are testable
+      without the network. 16 legacy rules, 9 modern. Aggressive timeout (8s)
+      and a 400KB read cap so one slow homepage cannot stall a run.
+- [x] `enrichment/dns/` — MX/NS/TXT via `node:dns`, inferring mail provider,
+      DNS provider and SPF includes. Still works for sites that block bots.
+- [x] `enrichment/github/` — org and repo activity. **Routed through
+      `MeteredClient` at zero cost** so consumption is visible in `api_usage`
+      even though it is free today.
+- [x] `enrichment/enrichment.service.ts` — runs every enricher, merges,
+      sets `lastEnrichedAt`, and tolerates individual failures.
+- [x] `maintenance.reverify-legacy` registered (FR-S5).
+
+### Decision: one F-LEG signal per company, dated when first raised
+`F-LEG` is a standing property, so re-dating it on each weekly
+re-verification would make an unchanged fact look like fresh news and its
+decay curve would never fall. When the markers clear, the signal is **deleted**
+so the engine stops pitching a rebuild to a company that already did one —
+the most embarrassing way for this to be wrong in front of a human.
 
 ### Done when
-- A known-legacy site is flagged; a known-modern site is not.
-- One enricher throwing does not abort enrichment of that company or the run.
-- `maintenance.reverify-legacy` updates stale `F-LEG` flags.
+- [x] Live: `stripe.com` → `react, nextjs`, no legacy. `vercel.com` →
+      `react, nextjs, tailwind, cdn-modern`, no legacy.
+- [x] Live: `wordpress.org` and `craigslist.org` flagged legacy
+      (`selfHostedMail`), and **F-LEG signals were raised for both**.
+- [x] One enricher failing does not lose the others — proven live, where
+      `wordpress.org`'s homepage fetch failed outright and the DNS facts still
+      landed.
+- [x] A modern marker does **not** cancel a legacy one: a React front end on
+      ASP.NET Web Forms still flags, which is exactly the lead being hunted.
+- [x] Current Apache 2.4 and PHP 8 are not flagged; jQuery 1.x/2.x is, jQuery
+      3.x is not.
+- [x] 10 fingerprint tests passing.
+
+### Note on real-world hit rate
+The rules only fire on unambiguous markers, biased against false positives
+because a wrong `F-LEG` pitches a rebuild to someone who does not need one.
+Against real HTML, `craigslist.org` and `php.net` produced no markers at all.
+Expect a low but trustworthy hit rate; tune the rules once run against actual
+ICP companies.
 
 ---
 
