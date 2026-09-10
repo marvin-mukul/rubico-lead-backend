@@ -11,6 +11,7 @@ import { JobsModule } from './jobs/index.js';
 import { NotificationsModule } from './notifications/index.js';
 import { ScoringConfigModule } from './scoring-config/index.js';
 import { SignalsModule } from './signals/index.js';
+import { SourcesModule } from './sources/index.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SignalsModule } from './signals/index.js';
     ScoringConfigModule,
     CompaniesModule,
     SignalsModule,
+    SourcesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

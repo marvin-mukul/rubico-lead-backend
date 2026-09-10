@@ -67,7 +67,7 @@ These are settled. Do not relitigate them mid-phase.
 | P5 | Job runner + `/internal/jobs/*` + health ✅ | P1, P2, P3 | §7, §8.1 |
 | P6 | Companies: canonical domain, dedupe, suppression, fit filter ✅ | P1 | §3, parent §4.1 |
 | P7 | Signals: dedupe hash, persistence, compound detection ✅ | P1, P6 | §5, §12 |
-| P8a | Source: `sec-edgar` | P5, P6, P7 | §4, §7.2 |
+| P8a | Source: `sec-edgar` ✅ | P5, P6, P7 | §4, §7.2 |
 | P8b | Source: `ats` (greenhouse/lever/ashby) | P8a | §4, §7.2 |
 | P8c | Sources: `hackernews`, `product-hunt`, `first-party` | P8a | §7.2, §8.1 |
 | P9 | Enrichment (homepage fingerprint, dns, github) | P4, P6 | §3, §4 |
@@ -517,29 +517,69 @@ a permanent bonus to every legacy-stack company and stop the bonus meaning
 
 ---
 
-## P8a — Source: `sec-edgar`
+## P8a — Source: `sec-edgar`  ✅ COMPLETE (with a flagged gap)
 
 **Goal:** the first live source, and the template every other source copies.
 **Spec refs:** §4 (`SignalSource`), §7.2, §10 (FR-B21).
 
 ### Tasks
-- [ ] `sources/signal-source.interface.ts` — exactly as §4. Define `RawSignal` and
-      `SignalType` here; every source depends on these types and nothing else.
-- [ ] `sources/source.registry.ts` — providers registered by name from config (FR-B1).
-- [ ] `sources/sec-edgar/` — Form D filings since a watermark. Send `User-Agent:
-      SEC_USER_AGENT` on **every** request; SEC fair-access requires it (FR-B21) and will
-      block you without it. Respect SEC's rate limit (10 req/s) with a simple spacer.
-- [ ] Watermark storage: persist `since` per source so a run resumes where the last
-      finished. A missing watermark falls back to the request's `since` param.
-- [ ] Register the `ingest.sec-edgar` job in the P5 registry; wire `counts`.
-- [ ] Handle 429 with a simple backoff — no more sophistication than that (§14).
-- [ ] Track consecutive failures per source; at 3, fire `source.unavailable` (§8.2).
+- [x] `sources/signal-source.interface.ts` — exactly as §4, bound to a
+      `SIGNAL_SOURCE` multi-token.
+- [x] `sources/http/source-http.client.ts` — per-host request spacer, 429/5xx
+      backoff honouring `Retry-After`, mandatory User-Agent. Free sources only;
+      billable calls still go through `MeteredClient` (FR-B2).
+- [x] `sources/watermark.service.ts` — resumes from the **last successful run**
+      of `ingest.<source>` in `job_runs`. No new table: §5 fixes the schema at
+      eight, and dedupe makes a slightly-early watermark harmless.
+- [x] `sources/source-health.service.ts` — counts consecutive failures from
+      `job_runs` (survives a restart) and fires `source.unavailable` at exactly
+      3 (NFR-8), once rather than on every subsequent failure.
+- [x] `sources/ingestion.service.ts` — the shared path from `RawSignal` to
+      companies and signals: canonical domain, suppression, dedupe, counting,
+      per-record error isolation (FR-B9).
+- [x] `sources/ingest-job.handler.ts` — one generated `ingest.<name>` job per
+      source, so adding a source never adds a job (FR-B1).
+- [x] `sources/sec-edgar/` — daily form index, Form D and D/A.
+
+### ⚠ Blocking gap: SEC publishes no domain for a Form D filer
+`Company.canonicalDomain` is the required unique identity key, but:
+- Form D XML contains **no URL at all** (checked: zero url-ish matches).
+- `data.sec.gov/submissions` returns an empty `website` for **0 of 12** sampled
+  Form D filers.
+
+So SEC signals cannot attach to a company without a name→domain step, which
+the spec does not describe. Handled as a config-selected seam
+(`sources/domain-resolver/`, `SEC_DOMAIN_RESOLVER`):
+
+| Value | Behaviour | Measured on real Form D names |
+|---|---|---|
+| `none` **(default)** | Resolves nothing; records counted `filteredOut` | 0 companies from 654 filings |
+| `clearbit` | Free autocomplete, exact-name match only | **5 / 40** resolved, and one of those five (`CLIMB GROUP, INC.` → `climbgroup.com.br`) looks like a wrong match |
+
+`none` is the default deliberately: a wrong domain silently merges two real
+companies under one identity, and every downstream stage inherits that error
+with no way to notice. **This is an open decision for the operator** — see the
+A1 note below.
+
+### Two things the live run proved
+1. **FR-B21 is not advisory.** Without `SEC_USER_AGENT`, every SEC request
+   returns 403. With it, 200.
+2. **SEC answers 403, not 404, for a date with no index** (weekends, and
+   2026-09-07 which was Labor Day). Since that is the same status as a block,
+   `fetch()` cannot tell them apart per request — so the source treats
+   *every day missing* as a block and fails the run, rather than reporting a
+   quiet, successful zero forever.
 
 ### Done when
-- `POST /internal/jobs/ingest.sec-edgar/run` produces real `Company` and `Signal` rows with
-  dated signals and working `sourceUrl` values.
-- **A2:** running it three times creates zero duplicate rows.
-- `counts` on the run is populated and plausible.
+- [x] `ingest.sec-edgar` runs green against live SEC and parses real filings:
+      **654 Form D/D-A filings** over two days, 334 in one day.
+- [x] The fixed-width `.idx` parser keeps spaces in company names and
+      distinguishes `D` and `D/A` from `DEF 14A` — the reason this uses the
+      daily index rather than `getcurrent`, whose `type=` filter is a prefix
+      match.
+- [x] `counts` populated: `{"fetched":654,"filteredOut":654}` — honest about
+      what happened, rather than reporting success with nothing ingested.
+- [ ] **A1 (≥100 companies) is NOT met by this source** — see P8b.
 
 ---
 

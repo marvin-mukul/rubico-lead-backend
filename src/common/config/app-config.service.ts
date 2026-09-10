@@ -105,4 +105,9 @@ export class AppConfigService {
   get secUserAgent(): string {
     return this.env.SEC_USER_AGENT;
   }
+
+  /** Which name->domain resolver `ingest.sec-edgar` uses. */
+  get secDomainResolver(): Env['SEC_DOMAIN_RESOLVER'] {
+    return this.env.SEC_DOMAIN_RESOLVER;
+  }
 }

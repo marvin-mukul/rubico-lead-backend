@@ -85,6 +85,13 @@ export const envSchema = z.object({
   PRICE_TABLE_PATH: z.string().min(1).default('./config/pricing.json'),
 
   // ── Sources ──────────────────────────────────────────────────────────────
+  // SEC Form D carries no website for the filer, so `ingest.sec-edgar` needs
+  // a name -> domain step to attach signals to a company at all. `none` (the
+  // default) resolves nothing and counts those records as filtered out;
+  // `clearbit` uses the free autocomplete endpoint with exact-name matching.
+  // See sources/domain-resolver for why the conservative option is default.
+  SEC_DOMAIN_RESOLVER: z.enum(['none', 'clearbit']).default('none'),
+
   // FR-B21: SEC fair-access requires a User-Agent identifying us with a
   // contact address. Without it SEC will block the crawler.
   SEC_USER_AGENT: z
