@@ -66,7 +66,7 @@ These are settled. Do not relitigate them mid-phase.
 | P4 | **Metering & cost enforcement** ✅ | P1, P3 | §6 |
 | P5 | Job runner + `/internal/jobs/*` + health ✅ | P1, P2, P3 | §7, §8.1 |
 | P6 | Companies: canonical domain, dedupe, suppression, fit filter ✅ | P1 | §3, parent §4.1 |
-| P7 | Signals: dedupe hash, persistence, compound detection | P1, P6 | §5, §12 |
+| P7 | Signals: dedupe hash, persistence, compound detection ✅ | P1, P6 | §5, §12 |
 | P8a | Source: `sec-edgar` | P5, P6, P7 | §4, §7.2 |
 | P8b | Source: `ats` (greenhouse/lever/ashby) | P8a | §4, §7.2 |
 | P8c | Sources: `hackernews`, `product-hunt`, `first-party` | P8a | §7.2, §8.1 |
@@ -474,28 +474,46 @@ is in parent spec §4.1.
 
 ---
 
-## P7 — Signals: dedupe hash, persistence, compound detection
+## P7 — Signals: dedupe hash, persistence, compound detection  ✅ COMPLETE
 
 **Goal:** the same event from four sources becomes one signal.
 **Spec refs:** §5 (`Signal`), §12, parent spec §5.
 
 ### Tasks
-- [ ] `signals/dedupe-hash.ts` — pure function over the *semantic* identity of an event
-      (companyId + type + normalised event date + a normalised subject), **not** over the
-      source URL or the raw payload. Two outlets reporting the same funding round must
-      collide.
-- [ ] `signals/signal.repository.ts` — insert-on-conflict-do-nothing against
-      `dedupeHash`. Count the conflicts; they are the `deduped` figure in job `counts`.
-- [ ] `signals/compound.service.ts` — detect multiple distinct signal types on one company
-      inside a window; emits a bonus capped at `+10` (§12).
-- [ ] Persist the full source payload into `Signal.raw` (JSONB) — evidence for A3/A7.
-- [ ] Unit tests (required by §12): "same round from four outlets produces one hash".
-      Include the negative case — two genuinely different rounds must not collide.
+- [x] `signals/signal.types.ts` — `RawSignal`, what a source emits. Carries
+      `subject`: the semantic identity of the event, independent of who
+      reported it.
+- [x] `signals/dedupe-hash.ts` — pure. SHA-256 over
+      `companyId | type | UTC event day | normalised subject`. **Deliberately
+      excludes** `sourceUrl`, `sourceName`, `excerpt` and `raw` — those say who
+      reported it, and including any of them gives one round four rows.
+      `normaliseSubject` strips case, accents, punctuation and extra spaces.
+- [x] `signals/signal.repository.ts` — per-record insert catching `P2002`
+      (FR-B9: **not** `createMany`, so a mid-batch failure leaves earlier
+      signals committed). Conflicts are counted as `deduped` for FR-B8.
+- [x] `signals/compound.service.ts` — distinct event types in a window, with
+      the bonus capped.
+
+### Decision: `F-LEG` is excluded from compound detection
+Only S1–S5 count toward distinct types. `F-LEG` is a standing property
+re-verified weekly by `maintenance.reverify-legacy`, so counting it would hand
+a permanent bonus to every legacy-stack company and stop the bonus meaning
+"several things are happening at once". Tested explicitly.
 
 ### Done when
-- The four-outlet test passes.
-- Re-inserting an identical signal is a no-op and increments the dedupe counter.
-- Compound bonus caps at +10 under a test with six concurrent signal types.
+- [x] **§12 dedupe test**: one round reported by four outlets — including
+      `Series A` / `series-a` / `  SERIES   A.  ` / `Séries A` — produces one
+      hash, and the repository stores **one row** (`created: 1, deduped: 3`).
+- [x] The negative cases hold: different rounds, different days, different
+      companies and different types all stay distinct, and field boundaries
+      cannot be shifted to force a collision.
+- [x] **A2**: ingesting the same batch three times gives
+      `created 1 / 0 / 0` and one row.
+- [x] FR-B9: a failing insert leaves the earlier one committed.
+- [x] Compound: repeats of one type score 0; two types score 5; **all five
+      types cap at 10** (§12); the cap follows config, not a hard-coded 10;
+      out-of-window signals are ignored; `F-LEG` does not count.
+- [x] 24 tests passing.
 
 ---
 

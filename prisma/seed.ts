@@ -54,6 +54,9 @@ const SCORING_DEFAULTS: Record<string, number> = {
   'band.high.min': 50,
   'band.investigate.min': 30,
 
+  // Points awarded per extra distinct signal type, capped by compound.bonus.
+  'compound.perExtraType': 5,
+
   // FR-SC4: no event signal newer than this → band `ignore`, whatever the fit.
   'scoring.eventSignalFreshnessDays': 30,
 
