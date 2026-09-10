@@ -62,7 +62,7 @@ These are settled. Do not relitigate them mid-phase.
 | P0 | Foundation, config, bootstrap hardening ✅ | — | §2, §10 |
 | P1 | Data model + first migration ✅ | P0 | §5 |
 | P2 | Auth guards + idempotency interceptor ✅ | P0, P1 | §8.1, §8.3 |
-| P3 | Notifications (Notifier → n8n) | P0 | §8.2 |
+| P3 | Notifications (Notifier → n8n) ✅ | P0 | §8.2 |
 | P4 | **Metering & cost enforcement** | P1, P3 | §6 |
 | P5 | Job runner + `/internal/jobs/*` + health | P1, P2, P3 | §7, §8.1 |
 | P6 | Companies: canonical domain, dedupe, suppression, fit filter | P1 | §3, parent §4.1 |
@@ -296,26 +296,29 @@ P13 should implement logout as a 204 and not pretend otherwise.
 
 ---
 
-## P3 — Notifications
+## P3 — Notifications  ✅ COMPLETE
 
 **Goal:** the outbound n8n webhook works and can never fail a job.
 **Spec refs:** §4 (`Notifier`), §8.2 (FR-B13).
 
 ### Tasks
-- [ ] `notifications/notifier.interface.ts` — exactly as §4. `NotificationEvent` typed
-      with the payload shape from §8.2: `{ severity, type, message, context, occurredAt }`.
-- [ ] `notifications/n8n.notifier.ts` — POST to `N8N_ALERT_WEBHOOK_URL` with header
-      `X-Webhook-Token: N8N_WEBHOOK_TOKEN`. **Not** a metered call — it's free.
-- [ ] Event types as a union: `'cost.cap_breached' | 'job.failed' | 'source.unavailable'`.
-- [ ] **FR-B13**: wrap the send in try/catch, log at `error`, swallow. A notification
-      failure must never propagate into a job's outcome. Add a short timeout (5s) and no
-      retry beyond one.
-- [ ] Register via token `NOTIFIER` so it is swappable.
+- [x] `notifications/notifier.interface.ts` — `Notifier`, `NotificationEvent`
+      with the exact §8.2 payload, and the three event types as a union.
+- [x] `notifications/n8n.notifier.ts` — POSTs to `N8N_ALERT_WEBHOOK_URL` with
+      `X-Webhook-Token`, 5s timeout, one retry. Not a metered call; it is free.
+- [x] **FR-B13** — every path logs and returns. `send()` has no throwing branch:
+      network failure, non-2xx and timeout are all swallowed after logging at
+      `error`. A notification failure cannot change a job's outcome.
+- [x] Registered under the `NOTIFIER` token (FR-B1), so swapping n8n for
+      anything else is one line in the module.
 
 ### Done when
-- Point `N8N_ALERT_WEBHOOK_URL` at a local listener; a test event arrives with the right
-  header and JSON shape.
-- Point it at a dead port; `notifier.send()` resolves without throwing.
+- [x] A throwaway HTTP receiver confirms the §8.2 payload shape and the
+      `x-webhook-token` header, and that `occurredAt` is filled when omitted
+      and preserved when supplied.
+- [x] A dead port resolves without throwing; a 500 resolves without throwing
+      and is retried exactly once; a success is not retried.
+- [x] 5 tests passing.
 
 ---
 
@@ -717,7 +720,7 @@ Five test groups. No HTTP-layer tests, no e2e, no coverage target.
 | `scoring` unit tests (5 cases) | P10 | ☐ |
 | `dedupeHash` unit tests | P7 | ☐ |
 | Fit filter unit tests | P6 | ☐ |
-| `MeteredClient` integration test (§6.3) | P4 | ☐ |
+| `MeteredClient` integration test (§6.3) | P4 | ✅ |
 | Idempotency integration test | P2 | ✅ |
 
 ---
