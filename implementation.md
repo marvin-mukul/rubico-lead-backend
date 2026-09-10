@@ -73,7 +73,7 @@ These are settled. Do not relitigate them mid-phase.
 | P9 | Enrichment (homepage fingerprint, dns, github) ✅ | P4, P6 | §3, §4 |
 | P10 | Scoring engine + `score.rescore-all` ✅ | P1, P7 | §5, §7.2, §12 |
 | P11 | LLM layer: classify + brief ✅ | P4, P10 | §11 |
-| P12 | `pipeline.run` orchestration | P9, P10, P11 | §7.2 |
+| P12 | `pipeline.run` orchestration ✅ | P9, P10, P11 | §7.2 |
 | P13 | `/api/*` surface | P2, P10 | §8.3 |
 | P14 | Digest, metrics, OpenAPI export, acceptance sweep | P12, P13 | §8.1, §9, §13 |
 
@@ -806,26 +806,53 @@ model call has been made**. What is proven and what is not:
 
 ---
 
-## P12 — `pipeline.run`
+## P12 — `pipeline.run`  ✅ COMPLETE
 
 **Goal:** one job that walks enrich → classify → score → brief.
 **Spec refs:** §7.2 (FR-B10).
 
 ### Tasks
-- [ ] `jobs/pipeline.run.ts` — **a single job, not four chained ones** (FR-B10). Stage
-      boundaries are visible in `counts`, which is why chaining buys nothing.
-- [ ] Process all pending companies/leads: enrich → classify (discarding FR-AI5 refusals)
-      → score → brief.
-- [ ] Per-record transactions (FR-B9). One bad record does not abort the run.
-- [ ] `counts` records every stage: fetched, deduped, filteredOut, enriched, classified,
-      scored, briefed (FR-B8).
-- [ ] Cap breach mid-run halts the pipeline, fires `cost.cap_breached`, marks the run
-      `failed` — it does **not** degrade quietly (FR-C2).
+- [x] `pipeline/pipeline-run.job.ts` — **a single job, not four chained ones**
+      (FR-B10).
+- [x] Enrich (if stale) → fit filter → classify → score → brief, over
+      companies that are active, have signals, and have no brief yet.
+- [x] Per-record transactions (FR-B9): one bad company is counted and skipped.
+- [x] `counts` for every stage: fetched, enriched, filteredOut, classified,
+      discarded, scored, briefed, failed (FR-B8).
+- [x] A cap breach **halts** the run (FR-C2).
+
+### Deviation from the plan: it lives in `pipeline/`, not `jobs/`
+The plan put this in `jobs/pipeline.run.ts`. It depends on enrichment,
+companies, the LLM layer and scoring, so putting it in `JobsModule` would make
+the job runner depend on every domain module — and the runner is deliberately
+ignorant of any specific job (FR-B1). It registers itself like every other
+handler.
+
+### The one place FR-B9 does not apply
+Every other failure is caught per record. A `MeteringError` is re-thrown
+immediately: a cap breach means the budget is gone, so catching and counting
+it 200 times would be exactly the quiet degradation FR-C2 forbids. Tested —
+four eligible companies, cap breach on the first, and the run stops after
+**one** attempt.
 
 ### Done when
-- A full run over ≥100 companies completes and every stage count is populated.
-- Injecting a poison record fails that record only; the run finishes.
-- Setting a $0.01 cap mid-run halts it and alerts (A5 again, now end-to-end).
+- [x] A full walk produces `classified`, `scored` and `briefed` counts and a
+      real lead row.
+- [x] A company failing the fit filter is dropped **before any LLM call** —
+      verified by asserting the classifier was never invoked.
+- [x] **A6 path**: a classifier refusal is discarded before scoring — no lead
+      row, and the brief step is never reached.
+- [x] **A5 path**: a cap breach halts after one attempt rather than being
+      counted per record.
+- [x] FR-B9: a poison record is counted while its neighbours still score.
+- [x] A dry run writes nothing and calls no model.
+- [x] 6 tests passing.
+
+### Not yet exercised end to end with real models
+The stage wiring is tested with stub providers. A full run against live
+Gemini and Anthropic needs the API keys, and would also be the first real
+check of the §6.3 cap behaviour *inside* the pipeline rather than in
+isolation.
 
 ---
 

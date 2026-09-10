@@ -6,6 +6,7 @@ import { AppConfigModule } from './common/config/index.js';
 import { IdempotencyModule } from './common/idempotency/index.js';
 import { MeteringModule } from './common/metering/index.js';
 import { PrismaModule } from './common/prisma/index.js';
+import { PipelineModule } from './pipeline/index.js';
 import { CompaniesModule } from './companies/index.js';
 import { EnrichmentModule } from './enrichment/index.js';
 import { JobsModule } from './jobs/index.js';
@@ -32,6 +33,7 @@ import { SourcesModule } from './sources/index.js';
     EnrichmentModule,
     ScoringModule,
     LlmModule,
+    PipelineModule,
   ],
   controllers: [AppController],
   providers: [AppService],
