@@ -92,6 +92,13 @@ export const envSchema = z.object({
   // See sources/domain-resolver for why the conservative option is default.
   SEC_DOMAIN_RESOLVER: z.enum(['none', 'clearbit']).default('none'),
 
+  // Pain-signal searches for the Hacker News source. Comma-separated, in
+  // config rather than code so the queries can be tuned without a deploy.
+  HACKERNEWS_QUERIES: z
+    .string()
+    .min(1)
+    .default('legacy system,legacy codebase,technical debt,migrating off,rewrite our'),
+
   // FR-B21: SEC fair-access requires a User-Agent identifying us with a
   // contact address. Without it SEC will block the crawler.
   SEC_USER_AGENT: z

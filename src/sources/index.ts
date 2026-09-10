@@ -18,3 +18,6 @@ export type { IndexRow } from './sec-edgar/sec-edgar.source.js';
 export { AtsSource } from './ats/ats.source.js';
 export { GreenhouseProvider, LeverProvider, AshbyProvider } from './ats/ats.providers.js';
 export type { AtsProvider, AtsPosting } from './ats/ats-provider.interface.js';
+export { HackerNewsSource } from './hackernews/hackernews.source.js';
+export { ProductHuntSource } from './product-hunt/product-hunt.source.js';
+export { FirstPartyController, firstPartyBodySchema } from './first-party/first-party.controller.js';

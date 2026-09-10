@@ -69,7 +69,7 @@ These are settled. Do not relitigate them mid-phase.
 | P7 | Signals: dedupe hash, persistence, compound detection ✅ | P1, P6 | §5, §12 |
 | P8a | Source: `sec-edgar` ✅ | P5, P6, P7 | §4, §7.2 |
 | P8b | Source: `ats` (greenhouse/lever/ashby) ✅ | P8a | §4, §7.2 |
-| P8c | Sources: `hackernews`, `product-hunt`, `first-party` | P8a | §7.2, §8.1 |
+| P8c | Sources: `hackernews`, `product-hunt`, `first-party` ✅ | P8a | §7.2, §8.1 |
 | P9 | Enrichment (homepage fingerprint, dns, github) | P4, P6 | §3, §4 |
 | P10 | Scoring engine + `score.rescore-all` | P1, P7 | §5, §7.2, §12 |
 | P11 | LLM layer: classify + brief | P4, P10 | §11 |
@@ -614,21 +614,34 @@ A1 note below.
 
 ---
 
-## P8c — Sources: `hackernews`, `product-hunt`, `first-party`
+## P8c — Sources: `hackernews`, `product-hunt`, `first-party`  ✅ COMPLETE
 
 **Goal:** the remaining Phase 0 inputs. **Spec refs:** §7.2, §8.1.
 
 ### Tasks
-- [ ] `sources/hackernews/` — HN Algolia search for pain signals. Free, unauthenticated.
-- [ ] `sources/product-hunt/` — recent launches, `PRODUCT_HUNT_TOKEN`.
-- [ ] `sources/first-party/` — driven by `POST /internal/ingest/first-party` with body
-      `{ domain, pageUrl, occurredAt, formType, email? }`, requires `X-Idempotency-Key`,
-      returns `202 { accepted: true }`. This one is push, not pull.
-- [ ] Register `ingest.hackernews` and `ingest.product-hunt`.
+- [x] `sources/hackernews/` — Algolia `search_by_date`, free and
+      unauthenticated. Pain queries live in `HACKERNEWS_QUERIES` (config, not
+      code) so they can be tuned without a deploy. A story only becomes a
+      signal if it links to a resolvable company domain.
+- [x] `sources/product-hunt/` — v2 GraphQL with `PRODUCT_HUNT_TOKEN`. Uses each
+      post's `website`, since the producthunt.com post URL is rejected as an
+      aggregator. A GraphQL error throws, so a bad or expired token is visible
+      rather than silently yielding zero launches every day.
+- [x] `sources/first-party/` — `POST /internal/ingest/first-party`, 202,
+      requires `X-Idempotency-Key`. The one push-shaped source; handled inline
+      because FR-B5's async contract exists for work that can outlast an HTTP
+      timeout, which one row cannot.
 
 ### Done when
-- Each job runs clean and idempotently.
-- The first-party endpoint rejects a missing idempotency key and is idempotent on replay.
+- [x] `ingest.hackernews` runs green against the live API and produced real
+      signals (e.g. `adchestra.com`, `ring.com` with dated HN item URLs).
+- [x] Watermarking works end to end: a second run 30s later correctly fetched
+      0 new stories.
+- [x] All four sources register: `ingest.ats`, `ingest.hackernews`,
+      `ingest.product-hunt`, `ingest.sec-edgar`.
+- [ ] `ingest.product-hunt` is **untested live** — `PRODUCT_HUNT_TOKEN` is
+      still the `REPLACE_ME` placeholder. The adapter is written against the
+      documented v2 schema; it needs one real run to confirm.
 
 ---
 

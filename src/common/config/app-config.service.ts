@@ -110,4 +110,11 @@ export class AppConfigService {
   get secDomainResolver(): Env['SEC_DOMAIN_RESOLVER'] {
     return this.env.SEC_DOMAIN_RESOLVER;
   }
+
+  /** Pain-signal searches for the Hacker News source. */
+  get hackerNewsQueries(): string[] {
+    return this.env.HACKERNEWS_QUERIES.split(',')
+      .map((query) => query.trim())
+      .filter((query) => query.length > 0);
+  }
 }

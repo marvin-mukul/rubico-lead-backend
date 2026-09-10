@@ -9,9 +9,12 @@ import { AshbyProvider, GreenhouseProvider, LeverProvider } from './ats/ats.prov
 import { ClearbitAutocompleteResolver } from './domain-resolver/clearbit-autocomplete.resolver.js';
 import { DOMAIN_RESOLVER } from './domain-resolver/domain-resolver.interface.js';
 import { NullDomainResolver } from './domain-resolver/null-domain.resolver.js';
+import { FirstPartyController } from './first-party/first-party.controller.js';
+import { HackerNewsSource } from './hackernews/hackernews.source.js';
 import { SourceHttpClient } from './http/source-http.client.js';
 import { IngestJobHandler } from './ingest-job.handler.js';
 import { IngestionService } from './ingestion.service.js';
+import { ProductHuntSource } from './product-hunt/product-hunt.source.js';
 import { SecEdgarSource } from './sec-edgar/sec-edgar.source.js';
 import { SIGNAL_SOURCE, type SignalSource } from './signal-source.interface.js';
 import { SourceHealthService } from './source-health.service.js';
@@ -25,6 +28,7 @@ import { WatermarkService } from './watermark.service.js';
  */
 @Module({
   imports: [CompaniesModule, SignalsModule],
+  controllers: [FirstPartyController],
   providers: [
     SourceHttpClient,
     WatermarkService,
@@ -55,9 +59,11 @@ import { WatermarkService } from './watermark.service.js';
 
     SecEdgarSource,
     AtsSource,
+    HackerNewsSource,
+    ProductHuntSource,
     {
       provide: SIGNAL_SOURCE,
-      inject: [SecEdgarSource, AtsSource],
+      inject: [SecEdgarSource, AtsSource, HackerNewsSource, ProductHuntSource],
       useFactory: (...sources: SignalSource[]) => sources,
     },
   ],
@@ -71,10 +77,12 @@ export class SourcesModule implements OnModuleInit {
     private readonly health: SourceHealthService,
     private readonly secEdgar: SecEdgarSource,
     private readonly ats: AtsSource,
+    private readonly hackerNews: HackerNewsSource,
+    private readonly productHunt: ProductHuntSource,
   ) {}
 
   onModuleInit(): void {
-    for (const source of [this.secEdgar, this.ats]) {
+    for (const source of [this.secEdgar, this.ats, this.hackerNews, this.productHunt]) {
       this.registry.register(
         new IngestJobHandler(source, this.ingestion, this.watermarks, this.health),
       );
