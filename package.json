@@ -27,7 +27,8 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset && prisma db seed",
     "db:studio": "prisma studio",
-    "auth:hash": "tsx scripts/hash-password.ts"
+    "auth:hash": "tsx scripts/hash-password.ts",
+    "openapi:export": "nest build && node dist/openapi.export.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

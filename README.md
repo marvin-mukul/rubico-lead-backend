@@ -1,114 +1,118 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# rubico-lead-engine-api
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend for the Rubico Lead Engine. Owns **all business logic**: ingestion,
+canonical domain resolution, dedupe, suppression, fit filtering, signal decay,
+scoring, LLM classification and brief generation, cost metering, and job
+execution.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+It does **not** own scheduling (n8n), Slack formatting (n8n), or UI (Next.js).
+See `requirement.md` for the specification and `implementation.md` for the
+phase-by-phase build log.
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Quick start
 
 ```bash
-$ npm install
+npm install
+cp .env.example .env          # then fill it in — boot fails fast on anything missing
+npm run db:migrate            # apply migrations
+npm run db:seed               # scoring_config defaults
+npm run start:dev
 ```
 
-## Compile and run the project
+Requires PostgreSQL 16 and Node 24.
+
+## Scripts
+
+| Script | Does |
+|---|---|
+| `npm run start:dev` | Watch mode |
+| `npm run build` | Compile to `dist/` |
+| `npm test` | Unit + integration tests (needs a reachable database) |
+| `npm run lint` | oxlint |
+| `npm run db:migrate` / `db:seed` / `db:reset` | Prisma migrate, seed, reset **+ seed** |
+| `npm run openapi:export` | Build, then write `openapi.json` at the repo root |
+| `npm run auth:hash -- '<password>'` | argon2id hash for `DASHBOARD_PASSWORD_HASH` |
+
+## HTTP surface
+
+Three namespaces, three auth models (§8):
+
+| Namespace | Auth | Client |
+|---|---|---|
+| `/internal/*` | `X-Internal-Token` | n8n |
+| `/api/*` | `Authorization: Bearer <session token>` | The Next.js **server** layer only |
+| `/openapi.json` | none, non-production only | Type generation |
+
+**CORS is disabled entirely** and the server binds to `127.0.0.1` by default.
+The browser never calls this API directly (FR-B14, FR-B15).
+
+## The OpenAPI contract, and the thing it cannot enforce
+
+`/api/*` DTOs are declared once as Zod schemas; the OpenAPI document is
+generated from them, so validation and contract cannot drift (§9). The
+frontend generates its types from `openapi.json` — no hand-written duplicates,
+no published package.
+
+> **FR-B19 — read this before changing an `/api/*` DTO.**
+>
+> A breaking change to any `/api/*` DTO requires a matching PR in
+> **`rubico-lead-engine-web`**. Note it in the PR description.
+>
+> There is **no build-time enforcement across the two repos**, and pretending
+> otherwise is worse than acknowledging it. Nothing here will fail if you skip
+> the companion PR — the frontend simply breaks at runtime after its next type
+> generation. Re-run `npm run openapi:export` and commit the result in the
+> same PR as the DTO change.
+
+## Jobs
+
+n8n triggers these over HTTP; the backend never schedules anything itself, and
+`@nestjs/schedule` is deliberately not installed so a second scheduler cannot
+appear by accident.
+
+| Job | Typical trigger |
+|---|---|
+| `ingest.sec-edgar` | 2× daily |
+| `ingest.ats` | 1× daily |
+| `ingest.hackernews` | 1× daily |
+| `ingest.product-hunt` | 1× daily |
+| `pipeline.run` | 2× daily, after ingestion |
+| `score.rescore-all` | nightly |
+| `maintenance.reverify-legacy` | weekly |
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+curl -X POST http://127.0.0.1:3000/internal/jobs/ingest.sec-edgar/run \
+  -H "X-Internal-Token: $INTERNAL_API_TOKEN" \
+  -H "X-Idempotency-Key: $(uuidgen)" \
+  -H 'content-type: application/json' -d '{}'
 ```
 
-## Run tests
+Returns `202` immediately with a `jobRunId`; poll
+`GET /internal/jobs/runs/:jobRunId` for status and counts.
 
-```bash
-# unit tests
-$ npm run test
+## Cost control
 
-# e2e tests
-$ npm run test:e2e
+Every billable call goes through `MeteredClient`, the one thing standing
+between this project and a surprise bill. It enforces a per-provider monthly
+cap, a per-lead pre-approval budget and a daily guard, and writes an
+`api_usage` row for every call. A cap breach **halts the pipeline and alerts**;
+it does not degrade quietly.
 
-# test coverage
-$ npm run test:cov
-```
+The test that proves it — `src/common/metering/metered-client.spec.ts`, the
+§6.3 acceptance test — is the reason this stays inside $25/month. Not
+discipline; that test.
 
-## Deployment
+## Known gaps
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Tracked with detail in `implementation.md`:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- **A1 is not met.** `sec-edgar` produces no companies under the default
+  domain resolver, because SEC publishes no website for a Form D filer, and
+  `ingest.ats` only visits companies already marked as tracked.
+- **No live LLM call has been made.** `GEMINI_API_KEY` and `ANTHROPIC_API_KEY`
+  are placeholders, so A6 is unverified against a real model.
+- `ingest.product-hunt` is untested live — `PRODUCT_HUNT_TOKEN` is a
+  placeholder.
+- A run interrupted by a process restart stays `running` in `job_runs`.
+  Postgres frees the advisory lock so nothing deadlocks, but the row needs a
+  sweeper.

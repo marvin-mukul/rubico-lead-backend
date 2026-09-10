@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module.js';
 import { AppConfigService } from './common/config/index.js';
+import { buildOpenApiDocument } from './openapi.factory.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,6 +12,16 @@ async function bootstrap() {
   // Next.js's server layer is the only client. Do not add app.enableCors().
 
   app.enableShutdownHooks();
+
+  // FR-B17: the spec is served in non-production only. In production the
+  // contract is the committed openapi.json, not a live endpoint.
+  if (!config.isProduction) {
+    const document = buildOpenApiDocument(app);
+    app.getHttpAdapter().get('/openapi.json', (_req: unknown, res: { json: (b: unknown) => void }) =>
+      res.json(document),
+    );
+    Logger.log('OpenAPI served at /openapi.json (non-production only)', 'Bootstrap');
+  }
 
   // FR-B15: bind to the loopback interface in production when Next and n8n are
   // co-hosted. If n8n moves to another host, bind to the private interface and
