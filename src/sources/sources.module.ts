@@ -3,6 +3,9 @@ import { AppConfigService } from '../common/config/app-config.service.js';
 import { CompaniesModule } from '../companies/index.js';
 import { JobRegistry } from '../jobs/index.js';
 import { SignalsModule } from '../signals/index.js';
+import { AtsSource } from './ats/ats.source.js';
+import { ATS_PROVIDER } from './ats/ats-provider.interface.js';
+import { AshbyProvider, GreenhouseProvider, LeverProvider } from './ats/ats.providers.js';
 import { ClearbitAutocompleteResolver } from './domain-resolver/clearbit-autocomplete.resolver.js';
 import { DOMAIN_RESOLVER } from './domain-resolver/domain-resolver.interface.js';
 import { NullDomainResolver } from './domain-resolver/null-domain.resolver.js';
@@ -41,10 +44,20 @@ import { WatermarkService } from './watermark.service.js';
       ) => (config.secDomainResolver === 'clearbit' ? clearbit : none),
     },
 
+    GreenhouseProvider,
+    LeverProvider,
+    AshbyProvider,
+    {
+      provide: ATS_PROVIDER,
+      inject: [GreenhouseProvider, LeverProvider, AshbyProvider],
+      useFactory: (...providers: unknown[]) => providers,
+    },
+
     SecEdgarSource,
+    AtsSource,
     {
       provide: SIGNAL_SOURCE,
-      inject: [SecEdgarSource],
+      inject: [SecEdgarSource, AtsSource],
       useFactory: (...sources: SignalSource[]) => sources,
     },
   ],
@@ -57,10 +70,11 @@ export class SourcesModule implements OnModuleInit {
     private readonly watermarks: WatermarkService,
     private readonly health: SourceHealthService,
     private readonly secEdgar: SecEdgarSource,
+    private readonly ats: AtsSource,
   ) {}
 
   onModuleInit(): void {
-    for (const source of [this.secEdgar]) {
+    for (const source of [this.secEdgar, this.ats]) {
       this.registry.register(
         new IngestJobHandler(source, this.ingestion, this.watermarks, this.health),
       );
