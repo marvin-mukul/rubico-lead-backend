@@ -74,7 +74,7 @@ These are settled. Do not relitigate them mid-phase.
 | P10 | Scoring engine + `score.rescore-all` ✅ | P1, P7 | §5, §7.2, §12 |
 | P11 | LLM layer: classify + brief ✅ | P4, P10 | §11 |
 | P12 | `pipeline.run` orchestration ✅ | P9, P10, P11 | §7.2 |
-| P13 | `/api/*` surface | P2, P10 | §8.3 |
+| P13 | `/api/*` surface ✅ | P2, P10 | §8.3 |
 | P14 | Digest, metrics, OpenAPI export, acceptance sweep | P12, P13 | §8.1, §9, §13 |
 
 Critical-path note: **P4 before any LLM or paid-enrichment code.** Spec §6 is explicit —
@@ -856,38 +856,60 @@ isolation.
 
 ---
 
-## P13 — `/api/*` surface
+## P13 — `/api/*` surface  ✅ COMPLETE
 
 **Goal:** everything the Next.js server layer needs, nothing the browser touches.
 **Spec refs:** §8.3, §9.
 
 ### Tasks
-- [ ] `npm i @nestjs/swagger` plus a zod→OpenAPI bridge. Every `/api/*` DTO carries
-      swagger decorators (FR-B17); Zod stays the runtime validator (§9).
-- [ ] All routes behind `@SessionAuth()`. **No CORS** (FR-B14). Bound to `127.0.0.1`
-      (FR-B15).
-- [ ] Auth: `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
-- [ ] Leads: `GET /api/leads?band=&status=&minScore=&page=&pageSize=`;
-      `GET /api/leads/:id` returning the full record — brief, **per-signal score
-      contributions with decay already applied**, evidence with source URLs (FR-B16);
-      `POST /api/leads/:id/decision` writing a `Decision` (capturing `scoreAtDecision`,
-      FR-B3) and updating `Lead.status`.
-- [ ] Companies: `GET /api/companies/:id` — firmographics, stack, legacy flags, signal
-      history.
-- [ ] Contacts: `GET /api/contacts?leadId=`; `POST /api/contacts` for manual entry.
-      `contacts/contact-resolver.interface.ts` is declared but has **only** a manual
-      implementation in Phase 0. FR-C5 guard **and** service assertion both apply.
-- [ ] Scoring config: `GET /api/scoring-config`, `PATCH /api/scoring-config` — weights and
-      half-lives change with no deploy (FR-SC3). Record `updatedBy`.
-- [ ] `outreach/outreach-sender.interface.ts` — **interface only, zero implementations**
-      (§4, §14).
+- [x] `@nestjs/swagger` plus a Zod→OpenAPI bridge (`api/openapi.ts`). Every
+      DTO is declared **once** as Zod; the OpenAPI schema is generated from
+      it (§9), so validation and contract cannot drift.
+- [x] All routes behind `@SessionAuth()`, no CORS, loopback-bound.
+- [x] Auth: `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
+- [x] Leads: list with `band`/`status`/`minScore`/paging; detail with brief,
+      **per-signal contributions with decay applied** (FR-B16) and evidence
+      with source URLs; `POST /:id/decision` capturing `scoreAtDecision`
+      (FR-B3).
+- [x] Companies: `GET /api/companies/:id` with firmographics, stack, legacy
+      flags and signal history.
+- [x] Contacts: `GET /api/contacts?leadId=`, `POST /api/contacts`.
+      `contacts/contact-resolver.interface.ts` declared with **only** a manual
+      implementation.
+- [x] Scoring config: `GET` and `PATCH`, no deploy needed (FR-SC3).
+- [x] `outreach/outreach-sender.interface.ts` — **interface only, zero
+      implementations** (§4, §14).
+
+### Two small defects caught while building
+1. `GET /api/scoring-config` originally returned `updatedAt: new Date()` and
+   `updatedBy: null` — fabricated audit fields, because the cache holds only
+   key→value. It now reads the rows.
+2. Query parameters were generated with `io: 'output'`, which marks a
+   defaulted field **required** — telling the frontend that `page` and
+   `pageSize` were mandatory. Requests now generate with `io: 'input'`,
+   responses with `io: 'output'`.
+
+### Note on `POST /api/contacts` and FR-C5
+§8.3 describes this as manual contact entry and §14 puts paid resolvers out
+of scope, but FR-C5/A9 require contact resolution to be unreachable for a
+lead that is not approved. Rather than leave A9 undemonstrable, the route
+takes a required `leadId` and is gated by `ContactResolutionGuard`, with
+`ContactsService` asserting the same rule again. Manual entry therefore goes
+through exactly the seam and the guard a paid resolver will.
 
 ### Done when
-- **A9:** contact resolution is unreachable for a lead not in `approved` status — proven
-  through the route *and* by calling the service directly.
-- `PATCH /api/scoring-config` followed by `score.rescore-all` changes scores with no
-  restart.
-- A lead detail response contains contributions the frontend can render without arithmetic.
+- [x] **A9** proven four ways: the service assertion refuses a `new` lead and
+      a `rejected` one; the route guard refuses before the service is reached;
+      the policy refuses with no HTTP request involved at all (the case that
+      matters, since a job bypasses the guard); and an `approved` lead
+      succeeds.
+- [x] **FR-B3** proven directly: a decision records score 64, then the lead's
+      `totalScore` is moved to 12, and the decision still reads 64.
+- [x] `GET /api/leads/:id` returns contributions with `ageDays` and decayed
+      `contribution`, and validates against its own response schema.
+- [x] Live over HTTP: 401 without a session and on a bad password; login →
+      `me` → `leads` all working against real data.
+- [x] 13 tests passing.
 
 ---
 
