@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module.js';
@@ -8,8 +9,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(AppConfigService);
 
-  // FR-B14: CORS is disabled entirely. The browser never calls this API —
-  // Next.js's server layer is the only client. Do not add app.enableCors().
+  // FR-B14: CORS stays disabled. The browser DOES call this API now — the
+  // React dashboard is a SPA — but it only ever sees one origin: Vite proxies
+  // `/api` in development, and a reverse proxy serves the built SPA and this
+  // API from the same origin in production. Same-origin needs no CORS headers,
+  // and adding `enableCors()` with `credentials: true` would be the one change
+  // that turns the SameSite=Lax session cookie into a CSRF liability.
+  // Do not add app.enableCors().
+
+  // Populates `req.cookies`, which SessionGuard reads (frontend FR-W8).
+  app.use(cookieParser());
 
   app.enableShutdownHooks();
 

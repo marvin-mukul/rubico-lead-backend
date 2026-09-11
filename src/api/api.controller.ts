@@ -7,11 +7,21 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CurrentSession, SessionAuth, SessionService, type SessionClaims } from '../common/auth/index.js';
+import type { Response } from 'express';
+import {
+  CurrentSession,
+  SESSION_COOKIE,
+  SessionAuth,
+  SessionService,
+  sessionCookieOptions,
+  type SessionClaims,
+} from '../common/auth/index.js';
+import { AppConfigService } from '../common/config/app-config.service.js';
 import { ContactResolutionGuard } from '../common/metering/index.js';
 import { PrismaService } from '../common/prisma/index.js';
 import { ZodValidationPipe } from '../common/validation/index.js';
@@ -44,37 +54,71 @@ import { LeadsService } from './leads.service.js';
 import { ApiZodBody, ApiZodOk, ApiZodQuery, ApiZodResponse } from './openapi.js';
 
 /**
- * §8.3 — the Next.js server layer is the only client of these routes. The
- * browser never calls them directly, which is why CORS is disabled entirely
- * (FR-B14) and the server binds to loopback (FR-B15).
+ * §8.3 — the React dashboard SPA is the only client of these routes. It is
+ * served from the same origin as this API (Vite proxy in development, reverse
+ * proxy in production), which is why CORS stays disabled entirely (FR-B14)
+ * and the server binds to loopback (FR-B15).
  */
 
 @ApiTags('auth')
 @Controller('api/auth')
 export class AuthController {
-  constructor(private readonly sessions: SessionService) {}
+  constructor(
+    private readonly sessions: SessionService,
+    private readonly config: AppConfigService,
+  ) {}
 
+  /**
+   * Sets the session as an httpOnly cookie and returns **no token**.
+   *
+   * `passthrough: true` so Nest still serialises the returned object — taking
+   * `@Res()` without it silently makes the handler responsible for ending the
+   * response, and the request hangs.
+   *
+   * The cookie's lifetime is derived from the token's own `exp` rather than
+   * re-deriving the TTL here. Two independently-computed expiries drift, and
+   * the failure mode is a browser that keeps sending a cookie the server has
+   * already stopped honouring.
+   */
   @Post('login')
   @HttpCode(200)
   @ApiZodBody(loginBodySchema)
   @ApiZodOk(loginResponseSchema)
-  async login(@Body(new ZodValidationPipe(loginBodySchema)) body: LoginBody) {
+  async login(
+    @Body(new ZodValidationPipe(loginBodySchema)) body: LoginBody,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const token = await this.sessions.login(body.email, body.password);
     const claims = this.sessions.verify(token);
     if (!claims) throw new UnauthorizedException();
-    return { token, expiresAt: new Date(claims.exp * 1000).toISOString() };
+
+    const maxAgeSeconds = Math.max(0, claims.exp - Math.floor(Date.now() / 1000));
+    response.cookie(
+      SESSION_COOKIE,
+      token,
+      sessionCookieOptions(this.config.isProduction, maxAgeSeconds),
+    );
+
+    return { email: claims.sub, expiresAt: new Date(claims.exp * 1000).toISOString() };
   }
 
   /**
-   * Tokens are stateless, so this cannot actually revoke one — it tells the
-   * client to discard it, and the token stays valid until it expires. Real
-   * revocation needs a denylist, which one shared Phase 0 credential does not
-   * justify. Documented rather than faked.
+   * Clears the cookie. The token itself is stateless and stays cryptographically
+   * valid until it expires — this cannot revoke it, and does not pretend to.
+   * Real revocation needs a denylist, which one shared Phase 0 credential does
+   * not justify. What it does guarantee is that the browser stops presenting
+   * it, which is the whole of what a logout button can honestly promise here.
+   *
+   * `clearCookie` must be given the same attributes the cookie was set with —
+   * a mismatched `path` or `sameSite` leaves the original in place and logout
+   * appears to do nothing.
    */
   @Post('logout')
   @HttpCode(204)
   @SessionAuth()
-  logout(): void {}
+  logout(@Res({ passthrough: true }) response: Response): void {
+    response.clearCookie(SESSION_COOKIE, sessionCookieOptions(this.config.isProduction));
+  }
 
   @Get('me')
   @SessionAuth()

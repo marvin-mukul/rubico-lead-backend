@@ -14,8 +14,14 @@ export const loginBodySchema = z.object({
   password: z.string().min(1),
 });
 
+/**
+ * No `token` field, deliberately. The session travels as an httpOnly cookie
+ * (frontend FR-W8/W-A9), and a token echoed in the body would be readable by
+ * the very JavaScript the cookie exists to keep it away from — the rule would
+ * hold only for as long as nobody stored what the response handed them.
+ */
 export const loginResponseSchema = z.object({
-  token: z.string(),
+  email: z.string(),
   expiresAt: z.iso.datetime(),
 });
 
