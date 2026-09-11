@@ -32,6 +32,7 @@ import {
   SUPPRESSION_REASONS,
 } from '../common/domain/index.js';
 import { ContactResolutionGuard } from '../common/metering/index.js';
+import { EVIDENCE_LEVELS } from '../opportunity/index.js';
 import { PrismaService } from '../common/prisma/index.js';
 import { ZodValidationPipe } from '../common/validation/index.js';
 import { ContactsService } from '../contacts/index.js';
@@ -161,6 +162,7 @@ export class MetaController {
       decisionValues: [...DECISION_VALUES],
       reasonCodes: [...DECISION_REASON_CODES],
       signalTypes: [...SIGNAL_TYPES],
+      evidenceLevels: [...EVIDENCE_LEVELS],
       eventSignalTypes: [...EVENT_SIGNAL_TYPES],
       suppressionReasons: [...SUPPRESSION_REASONS],
     };
