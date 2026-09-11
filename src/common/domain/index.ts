@@ -4,11 +4,24 @@
  * a config change, not a migration).
  */
 
-/** Signal taxonomy — `F-LEG` plus the five event signals (parent spec §5). */
-export const SIGNAL_TYPES = ['F-LEG', 'S1', 'S2', 'S3', 'S4', 'S5'] as const;
+/**
+ * Signal taxonomy.
+ *
+ * `F-LEG` and `F-PLAT` are standing properties of a company, not events:
+ *   F-LEG  — genuinely obsolete, rebuild-worthy stack. Supports a
+ *            modernisation pitch.
+ *   F-PLAT — a platform Rubico sells work on (WordPress, WooCommerce,
+ *            Shopify, Magento 2, Laravel). A capability MATCH and an
+ *            opportunity input, NEVER a defect.
+ *
+ * Keeping them apart is the difference between "we can help you extend this"
+ * and "you should throw this away", said to a company on a platform Rubico
+ * staffs for.
+ */
+export const SIGNAL_TYPES = ['F-LEG', 'F-PLAT', 'S1', 'S2', 'S3', 'S4', 'S5'] as const;
 export type SignalType = (typeof SIGNAL_TYPES)[number];
 
-/** Event signals only — `F-LEG` is a standing property, not an event. */
+/** Event signals only — `F-LEG` and `F-PLAT` are standing properties. */
 export const EVENT_SIGNAL_TYPES = ['S1', 'S2', 'S3', 'S4', 'S5'] as const;
 export type EventSignalType = (typeof EVENT_SIGNAL_TYPES)[number];
 
@@ -44,4 +57,12 @@ export type DecisionReasonCode = (typeof DECISION_REASON_CODES)[number];
 
 export function isEventSignal(type: string): type is EventSignalType {
   return (EVENT_SIGNAL_TYPES as readonly string[]).includes(type);
+}
+
+/** Standing properties of a company rather than things that happened. */
+export const STANDING_SIGNAL_TYPES = ['F-LEG', 'F-PLAT'] as const;
+export type StandingSignalType = (typeof STANDING_SIGNAL_TYPES)[number];
+
+export function isStandingSignal(type: string): type is StandingSignalType {
+  return (STANDING_SIGNAL_TYPES as readonly string[]).includes(type);
 }

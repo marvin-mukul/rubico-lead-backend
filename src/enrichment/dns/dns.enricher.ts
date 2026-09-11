@@ -82,12 +82,15 @@ export class DnsEnricher implements Enricher {
         .slice(0, 10);
     }
 
-    const legacyFlags: Record<string, unknown> = {};
-    // Self-hosted mail in 2026 usually means self-hosted everything.
+    // Self-hosted mail is a FACT about their infrastructure, not a defect.
+    // It was previously written to `legacyFlags`, which raised F-LEG and
+    // produced a modernisation pitch — the same §2.5.5 error as flagging
+    // WordPress. wordpress.org and craigslist.org were both flagged legacy on
+    // this rule alone. Technology presence does not imply technology pain.
     if (mxHosts.length > 0 && !mailProvider && mxHosts.some((host) => host.endsWith(domain))) {
-      legacyFlags.selfHostedMail = true;
+      detectedStack.selfHostedMail = true;
     }
 
-    return { detectedStack, ...(Object.keys(legacyFlags).length ? { legacyFlags } : {}) };
+    return { detectedStack };
   }
 }

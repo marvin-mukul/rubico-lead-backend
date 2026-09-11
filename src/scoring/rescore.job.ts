@@ -42,7 +42,7 @@ weights AS (
     COALESCE(MAX(CASE WHEN key LIKE '%.weight'       THEN value END), 0) AS weight,
     COALESCE(MAX(CASE WHEN key LIKE '%.halfLifeDays' THEN value END), 0) AS half_life
   FROM "ScoringConfig"
-  WHERE key ~ '^(F-LEG|S[1-5])\\.(weight|halfLifeDays)$'
+  WHERE key ~ '^(F-LEG|F-PLAT|S[1-5])\\.(weight|halfLifeDays)$'
   GROUP BY 1
 ),
 per_type AS (

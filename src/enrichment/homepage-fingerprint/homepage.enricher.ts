@@ -37,11 +37,13 @@ export class HomepageFingerprintEnricher implements Enricher {
 
     this.logger.debug(
       `${company.canonicalDomain}: modern=${Object.keys(result.modern).join(',') || '-'} ` +
+        `platform=${Object.keys(result.platform).join(',') || '-'} ` +
         `legacy=${Object.keys(result.legacy).join(',') || '-'}`,
     );
 
     return {
-      detectedStack: { ...result.modern, checkedAt: new Date().toISOString() },
+      detectedStack: { ...result.modern, ...result.platform, checkedAt: new Date().toISOString() },
+      platformFlags: result.platform,
       // Written even when empty, so a re-verification that finds nothing
       // clears a previous flag rather than leaving it stale (FR-S5).
       legacyFlags: isLegacy(result)

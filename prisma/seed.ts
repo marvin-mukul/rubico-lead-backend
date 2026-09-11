@@ -43,6 +43,15 @@ const SCORING_DEFAULTS: Record<string, number> = {
   'F-LEG.weight': 15,
   'F-LEG.halfLifeDays': 365,
 
+  // F-PLAT — the site runs on a platform Rubico sells work on. Weight is
+  // deliberately 0: per §2.5.5 technology presence does not imply technology
+  // pain, so a capability match must not push a company up the intent score
+  // on its own. It is recorded as evidence the classifier and brief can cite,
+  // and it feeds FIT via fit.signal.platformMatch below. P20's evidence-
+  // strength model is where it gains a principled scoring role.
+  'F-PLAT.weight': 0,
+  'F-PLAT.halfLifeDays': 365,
+
   // ── Compound detection (§12) ─────────────────────────────────────────────
   // §12: "compound bonus caps at +10".
   'compound.bonus': 10,
@@ -121,8 +130,11 @@ const SCORING_DEFAULTS: Record<string, number> = {
   'fit.industry.healthcare': 12,
   'fit.industry.logistics': 12,
 
-  // Bonuses, not dimensions: both are evidence of a real modernisation need.
+  // Bonuses, not dimensions.
   'fit.signal.legacyStack': 15,
+  // Running a stack Rubico already staffs for is genuine fit — it says they
+  // are the right kind of company, not that they need anything.
+  'fit.signal.platformMatch': 10,
   'fit.signal.atsPresent': 5,
 };
 

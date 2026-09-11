@@ -13,6 +13,12 @@ export interface EnrichmentResult {
   detectedStack?: Record<string, unknown>;
   /** Legacy markers, merged into `Company.legacyFlags`. Drives F-LEG. */
   legacyFlags?: Record<string, unknown>;
+  /**
+   * Rubico-serviced platform markers. Drives F-PLAT. Stored inside
+   * `Company.detectedStack` — these are capabilities, not defects, and must
+   * never reach `legacyFlags`.
+   */
+  platformFlags?: Record<string, unknown>;
   firmographics?: Firmographics;
   atsProvider?: string;
   atsSlug?: string;

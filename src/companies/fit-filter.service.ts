@@ -23,6 +23,14 @@ export interface FitInput {
   atsProvider?: string | null;
   /** Truthy when homepage fingerprinting found legacy markers (F-LEG). */
   hasLegacyFlags?: boolean;
+  /**
+   * Truthy when the site runs on a platform Rubico sells work on (F-PLAT).
+   *
+   * This is fit, not opportunity: "we already staff for this stack" is a real
+   * reason they are the right kind of company. It says nothing about whether
+   * they need anything, which is the classifier's job (§2.5.5).
+   */
+  hasPlatformMatch?: boolean;
 }
 
 export interface FitContribution {
@@ -85,6 +93,12 @@ export class FitFilterService {
       contributions.push({
         key: 'fit.signal.legacyStack',
         points: await this.config.get('fit.signal.legacyStack', 0),
+      });
+    }
+    if (input.hasPlatformMatch) {
+      contributions.push({
+        key: 'fit.signal.platformMatch',
+        points: await this.config.get('fit.signal.platformMatch', 0),
       });
     }
     if (input.atsProvider) {
