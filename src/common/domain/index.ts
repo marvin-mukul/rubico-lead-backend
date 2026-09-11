@@ -46,6 +46,13 @@ export const PRIORITY_BANDS: readonly LeadBand[] = ['immediate', 'high'];
 export const LEAD_STATUSES = ['new', 'approved', 'rejected'] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
+/**
+ * What a reviewer can decide. A subset of `LEAD_STATUSES` — `new` is the
+ * absence of a decision, not something anyone can choose.
+ */
+export const DECISION_VALUES = ['approved', 'rejected'] as const;
+export type DecisionValue = (typeof DECISION_VALUES)[number];
+
 export const JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed', 'skipped'] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
