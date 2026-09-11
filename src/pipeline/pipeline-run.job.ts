@@ -3,6 +3,7 @@ import { MeteringError } from '../common/metering/index.js';
 import { PrismaService } from '../common/prisma/index.js';
 import { FitFilterService, SuppressionService } from '../companies/index.js';
 import { EnrichmentService } from '../enrichment/index.js';
+import { Prisma } from '../generated/prisma/client.js';
 import type { CompanyModel as Company } from '../generated/prisma/models.js';
 import type { JobContext, JobHandler } from '../jobs/index.js';
 import {
@@ -73,13 +74,25 @@ export class PipelineRunJob implements JobHandler {
     await this.writeBriefs(briefRequests, context);
   }
 
-  /** Companies worth spending on: active, with signals, not already briefed. */
+  /**
+   * Companies worth spending on: active, with signals, not already briefed.
+   *
+   * ⚠ The obvious spelling of the last clause is a silent no-op. Prisma
+   * strips `undefined` from filters, so `brief: { not: undefined }` collapses
+   * to `{}` and `leads: { none: {} }` means "companies with no leads AT ALL".
+   * That capped every company at one Lead for life and killed the brief-retry
+   * path AnthropicProvider depends on when a batch misses its poll window.
+   * `NOT: { brief: { equals: Prisma.DbNull } }` is the spelling that
+   * survives. Plain `null` is rejected by the typed API for a nullable Json
+   * column, because Prisma distinguishes a SQL NULL (`DbNull`) from a JSON
+   * `null` literal (`JsonNull`); an absent brief is the former.
+   */
   private async pending(): Promise<Company[]> {
     return this.prisma.company.findMany({
       where: {
         ...SuppressionService.activeFilter(),
         signals: { some: {} },
-        leads: { none: { brief: { not: undefined } } },
+        leads: { none: { NOT: { brief: { equals: Prisma.DbNull } } } },
       },
       orderBy: { firstSeenAt: 'desc' },
       take: BATCH_LIMIT,
