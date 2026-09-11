@@ -121,6 +121,7 @@ export class PipelineRunJob implements JobHandler {
       industry: current.industry,
       atsProvider: current.atsProvider,
       hasLegacyFlags: hasLegacyMarkers(current.legacyFlags),
+      hasPlatformMatch: hasPlatformMarkers(current.detectedStack),
     });
 
     if (!fit.passes) {
@@ -214,4 +215,20 @@ export class PipelineRunJob implements JobHandler {
 function hasLegacyMarkers(legacyFlags: unknown): boolean {
   if (!legacyFlags || typeof legacyFlags !== 'object') return false;
   return Object.keys(legacyFlags as Record<string, unknown>).some((key) => key !== 'checkedAt');
+}
+
+/** Platform markers live inside detectedStack — they are capabilities. */
+const SERVICED_PLATFORMS = [
+  'wordpress',
+  'woocommerce',
+  'shopify',
+  'magento2',
+  'laravel',
+  'drupal-current',
+];
+
+function hasPlatformMarkers(detectedStack: unknown): boolean {
+  if (!detectedStack || typeof detectedStack !== 'object') return false;
+  const keys = Object.keys(detectedStack as Record<string, unknown>);
+  return SERVICED_PLATFORMS.some((platform) => keys.includes(platform));
 }
