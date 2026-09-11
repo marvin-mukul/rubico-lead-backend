@@ -218,6 +218,27 @@
         ]
       }
     },
+    "/api/meta": {
+      "get": {
+        "operationId": "MetaController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "meta"
+        ]
+      }
+    },
     "/api/companies/{id}": {
       "get": {
         "operationId": "CompaniesController_detail",
@@ -1380,6 +1401,118 @@
           "email",
           "issuedAt",
           "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "MetaResponse": {
+        "type": "object",
+        "properties": {
+          "bands": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "immediate",
+                "high",
+                "investigate",
+                "ignore"
+              ]
+            }
+          },
+          "leadStatuses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "new",
+                "approved",
+                "rejected"
+              ]
+            }
+          },
+          "decisionValues": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "approved",
+                "rejected"
+              ]
+            }
+          },
+          "reasonCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "wrong_fit",
+                "stale",
+                "already_known",
+                "no_real_need",
+                "bad_contact",
+                "good",
+                "wrong_archetype",
+                "no_technology_need",
+                "evidence_too_weak",
+                "wrong_capability",
+                "platform_not_problem",
+                "attribution_error"
+              ]
+            }
+          },
+          "signalTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "F-LEG",
+                "F-PLAT",
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "S6",
+                "S7"
+              ]
+            }
+          },
+          "eventSignalTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "S6",
+                "S7"
+              ]
+            }
+          },
+          "suppressionReasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "client",
+                "competitor",
+                "rejected",
+                "do-not-contact"
+              ]
+            }
+          }
+        },
+        "required": [
+          "bands",
+          "leadStatuses",
+          "decisionValues",
+          "reasonCodes",
+          "signalTypes",
+          "eventSignalTypes",
+          "suppressionReasons"
         ],
         "additionalProperties": false
       },

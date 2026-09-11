@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   DECISION_REASON_CODES,
   DECISION_VALUES,
+  EVENT_SIGNAL_TYPES,
   LEAD_BANDS,
   LEAD_STATUSES,
   SIGNAL_TYPES,
@@ -36,6 +37,37 @@ export const meResponseSchema = z.object({
   email: z.string(),
   issuedAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
+});
+
+// ── meta ────────────────────────────────────────────────────────────────
+
+/**
+ * The closed vocabularies, as runtime data.
+ *
+ * Frontend FR-W30: "no component contains a hardcoded list of signal types,
+ * bands, or reason codes — all three come from generated types or a backend
+ * endpoint", and the requirement it serves is that adding a signal type in
+ * Phase 2 "must not require a frontend audit".
+ *
+ * Generated *types* alone cannot satisfy that. TypeScript unions are erased,
+ * so a screen that renders one radio per reason code needs the values at
+ * runtime, and the only way to get them from a type is to re-declare the list
+ * by hand — the exact thing FR-W30 forbids. Hence an endpoint: the vocabulary
+ * is published once, from the same constants the rest of the server enforces,
+ * and a new signal type reaches the UI without anyone editing it.
+ *
+ * Codes only, no display labels. The client derives a label from the code
+ * (`wrong_fit` -> "Wrong fit"), which keeps UI copy out of the API and needs
+ * no lookup table on either side.
+ */
+export const metaResponseSchema = z.object({
+  bands: z.array(z.enum(LEAD_BANDS)),
+  leadStatuses: z.array(z.enum(LEAD_STATUSES)),
+  decisionValues: z.array(z.enum(DECISION_VALUES)),
+  reasonCodes: z.array(z.enum(DECISION_REASON_CODES)),
+  signalTypes: z.array(z.enum(SIGNAL_TYPES)),
+  eventSignalTypes: z.array(z.enum(EVENT_SIGNAL_TYPES)),
+  suppressionReasons: z.array(z.enum(SUPPRESSION_REASONS)),
 });
 
 // ── leads ───────────────────────────────────────────────────────────────
