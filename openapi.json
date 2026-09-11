@@ -10,22 +10,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "format": "email",
-                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  },
-                  "password": {
-                    "type": "string",
-                    "minLength": 1
-                  }
-                },
-                "required": [
-                  "email",
-                  "password"
-                ]
+                "$ref": "#/components/schemas/LoginBody"
               }
             }
           }
@@ -36,22 +21,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "email": {
-                      "type": "string"
-                    },
-                    "expiresAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    }
-                  },
-                  "required": [
-                    "email",
-                    "expiresAt"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/LoginResponse"
                 }
               }
             }
@@ -86,28 +56,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "email": {
-                      "type": "string"
-                    },
-                    "issuedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    },
-                    "expiresAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    }
-                  },
-                  "required": [
-                    "email",
-                    "issuedAt",
-                    "expiresAt"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/MeResponse"
                 }
               }
             }
@@ -188,101 +137,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "page": {
-                      "type": "number"
-                    },
-                    "pageSize": {
-                      "type": "number"
-                    },
-                    "total": {
-                      "type": "number"
-                    },
-                    "leads": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "companyId": {
-                            "type": "string"
-                          },
-                          "canonicalDomain": {
-                            "type": "string"
-                          },
-                          "companyName": {
-                            "type": "string"
-                          },
-                          "fitScore": {
-                            "type": "number"
-                          },
-                          "intentScore": {
-                            "type": "number"
-                          },
-                          "compoundBonus": {
-                            "type": "number"
-                          },
-                          "totalScore": {
-                            "type": "number"
-                          },
-                          "band": {
-                            "type": "string"
-                          },
-                          "status": {
-                            "type": "string"
-                          },
-                          "likelyNeed": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "archetype": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "opportunityKey": {
-                            "type": "string"
-                          },
-                          "confidence": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "scoredAt": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "companyId",
-                          "canonicalDomain",
-                          "companyName",
-                          "fitScore",
-                          "intentScore",
-                          "compoundBonus",
-                          "totalScore",
-                          "band",
-                          "status",
-                          "likelyNeed",
-                          "archetype",
-                          "opportunityKey",
-                          "confidence",
-                          "scoredAt"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "page",
-                    "pageSize",
-                    "total",
-                    "leads"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/LeadListResponse"
                 }
               }
             }
@@ -312,282 +167,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "companyId": {
-                      "type": "string"
-                    },
-                    "canonicalDomain": {
-                      "type": "string"
-                    },
-                    "companyName": {
-                      "type": "string"
-                    },
-                    "fitScore": {
-                      "type": "number"
-                    },
-                    "intentScore": {
-                      "type": "number"
-                    },
-                    "compoundBonus": {
-                      "type": "number"
-                    },
-                    "totalScore": {
-                      "type": "number"
-                    },
-                    "band": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "likelyNeed": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "archetype": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "opportunityKey": {
-                      "type": "string"
-                    },
-                    "confidence": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "scoredAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    },
-                    "brief": {
-                      "nullable": true
-                    },
-                    "llmClassification": {
-                      "nullable": true
-                    },
-                    "rubicoCapabilities": {
-                      "nullable": true,
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "whyThisLead": {
-                      "nullable": true
-                    },
-                    "bandReason": {
-                      "type": "string"
-                    },
-                    "contributions": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "signalId": {
-                            "type": "string"
-                          },
-                          "type": {
-                            "type": "string"
-                          },
-                          "eventDate": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          },
-                          "ageDays": {
-                            "type": "number"
-                          },
-                          "baseWeight": {
-                            "type": "number"
-                          },
-                          "halfLifeDays": {
-                            "type": "number"
-                          },
-                          "contribution": {
-                            "type": "number"
-                          },
-                          "counted": {
-                            "type": "boolean"
-                          }
-                        },
-                        "required": [
-                          "signalId",
-                          "type",
-                          "eventDate",
-                          "ageDays",
-                          "baseWeight",
-                          "halfLifeDays",
-                          "contribution",
-                          "counted"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "evidence": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "signalId": {
-                            "type": "string"
-                          },
-                          "type": {
-                            "type": "string"
-                          },
-                          "eventDate": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          },
-                          "sourceName": {
-                            "type": "string"
-                          },
-                          "sourceUrl": {
-                            "type": "string"
-                          },
-                          "excerpt": {
-                            "nullable": true,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "signalId",
-                          "type",
-                          "eventDate",
-                          "sourceName",
-                          "sourceUrl",
-                          "excerpt"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "company": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "canonicalDomain": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "country": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "region": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "headcountBand": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "industry": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "detectedStack": {
-                          "nullable": true
-                        },
-                        "legacyFlags": {
-                          "nullable": true
-                        },
-                        "suppressionReason": {
-                          "nullable": true,
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "canonicalDomain",
-                        "name",
-                        "country",
-                        "region",
-                        "headcountBand",
-                        "industry",
-                        "detectedStack",
-                        "legacyFlags",
-                        "suppressionReason"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "decisions": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "user": {
-                            "type": "string"
-                          },
-                          "decision": {
-                            "type": "string"
-                          },
-                          "reasonCode": {
-                            "type": "string"
-                          },
-                          "notes": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "scoreAtDecision": {
-                            "type": "number"
-                          },
-                          "decidedAt": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "user",
-                          "decision",
-                          "reasonCode",
-                          "notes",
-                          "scoreAtDecision",
-                          "decidedAt"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "companyId",
-                    "canonicalDomain",
-                    "companyName",
-                    "fitScore",
-                    "intentScore",
-                    "compoundBonus",
-                    "totalScore",
-                    "band",
-                    "status",
-                    "likelyNeed",
-                    "archetype",
-                    "opportunityKey",
-                    "confidence",
-                    "scoredAt",
-                    "brief",
-                    "llmClassification",
-                    "rubicoCapabilities",
-                    "whyThisLead",
-                    "contributions",
-                    "evidence",
-                    "company",
-                    "decisions"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/LeadDetail"
                 }
               }
             }
@@ -616,41 +196,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "decision": {
-                    "type": "string",
-                    "enum": [
-                      "approved",
-                      "rejected"
-                    ]
-                  },
-                  "reasonCode": {
-                    "type": "string",
-                    "enum": [
-                      "wrong_fit",
-                      "stale",
-                      "already_known",
-                      "no_real_need",
-                      "bad_contact",
-                      "good",
-                      "wrong_archetype",
-                      "no_technology_need",
-                      "evidence_too_weak",
-                      "wrong_capability",
-                      "platform_not_problem",
-                      "attribution_error"
-                    ]
-                  },
-                  "notes": {
-                    "type": "string",
-                    "maxLength": 2000
-                  }
-                },
-                "required": [
-                  "decision",
-                  "reasonCode"
-                ]
+                "$ref": "#/components/schemas/DecisionBody"
               }
             }
           }
@@ -661,30 +207,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "leadId": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "scoreAtDecision": {
-                      "type": "number"
-                    },
-                    "decidedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    }
-                  },
-                  "required": [
-                    "leadId",
-                    "status",
-                    "scoreAtDecision",
-                    "decidedAt"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/DecisionResponse"
                 }
               }
             }
@@ -714,119 +237,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "canonicalDomain": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "country": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "region": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "headcountBand": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "industry": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "detectedStack": {
-                      "nullable": true
-                    },
-                    "legacyFlags": {
-                      "nullable": true
-                    },
-                    "atsProvider": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "atsSlug": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "suppressionReason": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "firstSeenAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    },
-                    "lastEnrichedAt": {
-                      "nullable": true,
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    },
-                    "signals": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "signalId": {
-                            "type": "string"
-                          },
-                          "type": {
-                            "type": "string"
-                          },
-                          "eventDate": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          },
-                          "sourceName": {
-                            "type": "string"
-                          },
-                          "sourceUrl": {
-                            "type": "string"
-                          },
-                          "excerpt": {
-                            "nullable": true,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "signalId",
-                          "type",
-                          "eventDate",
-                          "sourceName",
-                          "sourceUrl",
-                          "excerpt"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "canonicalDomain",
-                    "name",
-                    "country",
-                    "region",
-                    "headcountBand",
-                    "industry",
-                    "detectedStack",
-                    "legacyFlags",
-                    "atsProvider",
-                    "atsSlug",
-                    "suppressionReason",
-                    "firstSeenAt",
-                    "lastEnrichedAt",
-                    "signals"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/CompanyDetail"
                 }
               }
             }
@@ -857,70 +268,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "contacts": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "companyId": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "role": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "seniority": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "email": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "emailStatus": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "source": {
-                            "type": "string"
-                          },
-                          "creditCost": {
-                            "type": "number"
-                          },
-                          "resolvedAt": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "companyId",
-                          "name",
-                          "role",
-                          "seniority",
-                          "email",
-                          "emailStatus",
-                          "source",
-                          "creditCost",
-                          "resolvedAt"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "contacts"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/ContactListResponse"
                 }
               }
             }
@@ -938,35 +286,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "leadId": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "name": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 200
-                  },
-                  "role": {
-                    "type": "string",
-                    "maxLength": 200
-                  },
-                  "seniority": {
-                    "type": "string",
-                    "maxLength": 100
-                  },
-                  "email": {
-                    "type": "string",
-                    "format": "email",
-                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  }
-                },
-                "required": [
-                  "leadId",
-                  "name"
-                ]
+                "$ref": "#/components/schemas/CreateContactBody"
               }
             }
           }
@@ -977,58 +297,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "companyId": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "role": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "seniority": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "email": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "emailStatus": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    },
-                    "creditCost": {
-                      "type": "number"
-                    },
-                    "resolvedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "companyId",
-                    "name",
-                    "role",
-                    "seniority",
-                    "email",
-                    "emailStatus",
-                    "source",
-                    "creditCost",
-                    "resolvedAt"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/Contact"
                 }
               }
             }
@@ -1049,43 +318,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "config": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "key": {
-                            "type": "string"
-                          },
-                          "value": {
-                            "type": "number"
-                          },
-                          "updatedAt": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          },
-                          "updatedBy": {
-                            "nullable": true,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "key",
-                          "value",
-                          "updatedAt",
-                          "updatedBy"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "config"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/ScoringConfigResponse"
                 }
               }
             }
@@ -1103,34 +336,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "updates": {
-                    "minItems": 1,
-                    "maxItems": 100,
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "key": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 200
-                        },
-                        "value": {
-                          "type": "number"
-                        }
-                      },
-                      "required": [
-                        "key",
-                        "value"
-                      ]
-                    }
-                  }
-                },
-                "required": [
-                  "updates"
-                ]
+                "$ref": "#/components/schemas/ScoringConfigPatch"
               }
             }
           }
@@ -1141,43 +347,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "config": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "key": {
-                            "type": "string"
-                          },
-                          "value": {
-                            "type": "number"
-                          },
-                          "updatedAt": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          },
-                          "updatedBy": {
-                            "nullable": true,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "key",
-                          "value",
-                          "updatedAt",
-                          "updatedBy"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "config"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/ScoringConfigResponse"
                 }
               }
             }
@@ -1219,90 +389,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "from": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    },
-                    "to": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    },
-                    "m1_signalsIngested": {
-                      "type": "number"
-                    },
-                    "m2_companiesDiscovered": {
-                      "type": "number"
-                    },
-                    "m3_passedFitFilter": {
-                      "type": "number"
-                    },
-                    "m4_classified": {
-                      "type": "number"
-                    },
-                    "m5_discardedByClassifier": {
-                      "type": "number"
-                    },
-                    "m6_leadsScored": {
-                      "type": "number"
-                    },
-                    "m7_briefsGenerated": {
-                      "type": "number"
-                    },
-                    "m8_decisions": {
-                      "type": "object",
-                      "properties": {
-                        "approved": {
-                          "type": "number"
-                        },
-                        "rejected": {
-                          "type": "number"
-                        },
-                        "approvalRate": {
-                          "type": "number"
-                        },
-                        "meanScoreApproved": {
-                          "nullable": true,
-                          "type": "number"
-                        },
-                        "meanScoreRejected": {
-                          "nullable": true,
-                          "type": "number"
-                        }
-                      },
-                      "required": [
-                        "approved",
-                        "rejected",
-                        "approvalRate",
-                        "meanScoreApproved",
-                        "meanScoreRejected"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "byBand": {
-                      "type": "object",
-                      "additionalProperties": {
-                        "type": "number"
-                      }
-                    }
-                  },
-                  "required": [
-                    "from",
-                    "to",
-                    "m1_signalsIngested",
-                    "m2_companiesDiscovered",
-                    "m3_passedFitFilter",
-                    "m4_classified",
-                    "m5_discardedByClassifier",
-                    "m6_leadsScored",
-                    "m7_briefsGenerated",
-                    "m8_decisions",
-                    "byBand"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/FunnelResponse"
                 }
               }
             }
@@ -1323,53 +410,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "monthToDateUsd": {
-                      "type": "number"
-                    },
-                    "todayUsd": {
-                      "type": "number"
-                    },
-                    "monthlyCapUsd": {
-                      "type": "number"
-                    },
-                    "byProvider": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "provider": {
-                            "type": "string"
-                          },
-                          "usdCost": {
-                            "type": "number"
-                          }
-                        },
-                        "required": [
-                          "provider",
-                          "usdCost"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "qualifiedOpportunities": {
-                      "type": "number"
-                    },
-                    "costPerQualifiedOpportunityUsd": {
-                      "nullable": true,
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "monthToDateUsd",
-                    "todayUsd",
-                    "monthlyCapUsd",
-                    "byProvider",
-                    "qualifiedOpportunities",
-                    "costPerQualifiedOpportunityUsd"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/SpendResponse"
                 }
               }
             }
@@ -1402,6 +443,975 @@
         "type": "http"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "CompanyDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "canonicalDomain": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "country": {
+            "nullable": true,
+            "type": "string"
+          },
+          "region": {
+            "nullable": true,
+            "type": "string"
+          },
+          "headcountBand": {
+            "nullable": true,
+            "type": "string"
+          },
+          "industry": {
+            "nullable": true,
+            "type": "string"
+          },
+          "detectedStack": {
+            "nullable": true
+          },
+          "legacyFlags": {
+            "nullable": true
+          },
+          "atsProvider": {
+            "nullable": true,
+            "type": "string"
+          },
+          "atsSlug": {
+            "nullable": true,
+            "type": "string"
+          },
+          "suppressionReason": {
+            "nullable": true,
+            "type": "string"
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "lastEnrichedAt": {
+            "nullable": true,
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "signalId": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "eventDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "sourceName": {
+                  "type": "string"
+                },
+                "sourceUrl": {
+                  "type": "string"
+                },
+                "excerpt": {
+                  "nullable": true,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "signalId",
+                "type",
+                "eventDate",
+                "sourceName",
+                "sourceUrl",
+                "excerpt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "canonicalDomain",
+          "name",
+          "country",
+          "region",
+          "headcountBand",
+          "industry",
+          "detectedStack",
+          "legacyFlags",
+          "atsProvider",
+          "atsSlug",
+          "suppressionReason",
+          "firstSeenAt",
+          "lastEnrichedAt",
+          "signals"
+        ],
+        "additionalProperties": false
+      },
+      "Contact": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "nullable": true,
+            "type": "string"
+          },
+          "seniority": {
+            "nullable": true,
+            "type": "string"
+          },
+          "email": {
+            "nullable": true,
+            "type": "string"
+          },
+          "emailStatus": {
+            "nullable": true,
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "creditCost": {
+            "type": "number"
+          },
+          "resolvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "companyId",
+          "name",
+          "role",
+          "seniority",
+          "email",
+          "emailStatus",
+          "source",
+          "creditCost",
+          "resolvedAt"
+        ],
+        "additionalProperties": false
+      },
+      "ContactListResponse": {
+        "type": "object",
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "role": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "seniority": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "email": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "emailStatus": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "creditCost": {
+                  "type": "number"
+                },
+                "resolvedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "companyId",
+                "name",
+                "role",
+                "seniority",
+                "email",
+                "emailStatus",
+                "source",
+                "creditCost",
+                "resolvedAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "contacts"
+        ],
+        "additionalProperties": false
+      },
+      "CreateContactBody": {
+        "type": "object",
+        "properties": {
+          "leadId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "seniority": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          }
+        },
+        "required": [
+          "leadId",
+          "name"
+        ]
+      },
+      "DecisionBody": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "wrong_fit",
+              "stale",
+              "already_known",
+              "no_real_need",
+              "bad_contact",
+              "good",
+              "wrong_archetype",
+              "no_technology_need",
+              "evidence_too_weak",
+              "wrong_capability",
+              "platform_not_problem",
+              "attribution_error"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "decision",
+          "reasonCode"
+        ]
+      },
+      "DecisionResponse": {
+        "type": "object",
+        "properties": {
+          "leadId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "scoreAtDecision": {
+            "type": "number"
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "leadId",
+          "status",
+          "scoreAtDecision",
+          "decidedAt"
+        ],
+        "additionalProperties": false
+      },
+      "FunnelResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "m1_signalsIngested": {
+            "type": "number"
+          },
+          "m2_companiesDiscovered": {
+            "type": "number"
+          },
+          "m3_passedFitFilter": {
+            "type": "number"
+          },
+          "m4_classified": {
+            "type": "number"
+          },
+          "m5_discardedByClassifier": {
+            "type": "number"
+          },
+          "m6_leadsScored": {
+            "type": "number"
+          },
+          "m7_briefsGenerated": {
+            "type": "number"
+          },
+          "m8_decisions": {
+            "type": "object",
+            "properties": {
+              "approved": {
+                "type": "number"
+              },
+              "rejected": {
+                "type": "number"
+              },
+              "approvalRate": {
+                "type": "number"
+              },
+              "meanScoreApproved": {
+                "nullable": true,
+                "type": "number"
+              },
+              "meanScoreRejected": {
+                "nullable": true,
+                "type": "number"
+              }
+            },
+            "required": [
+              "approved",
+              "rejected",
+              "approvalRate",
+              "meanScoreApproved",
+              "meanScoreRejected"
+            ],
+            "additionalProperties": false
+          },
+          "byBand": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "m1_signalsIngested",
+          "m2_companiesDiscovered",
+          "m3_passedFitFilter",
+          "m4_classified",
+          "m5_discardedByClassifier",
+          "m6_leadsScored",
+          "m7_briefsGenerated",
+          "m8_decisions",
+          "byBand"
+        ],
+        "additionalProperties": false
+      },
+      "LeadDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "canonicalDomain": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "fitScore": {
+            "type": "number"
+          },
+          "intentScore": {
+            "type": "number"
+          },
+          "compoundBonus": {
+            "type": "number"
+          },
+          "totalScore": {
+            "type": "number"
+          },
+          "band": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "likelyNeed": {
+            "nullable": true,
+            "type": "string"
+          },
+          "archetype": {
+            "nullable": true,
+            "type": "string"
+          },
+          "opportunityKey": {
+            "type": "string"
+          },
+          "confidence": {
+            "nullable": true,
+            "type": "string"
+          },
+          "scoredAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "brief": {
+            "nullable": true
+          },
+          "llmClassification": {
+            "nullable": true
+          },
+          "rubicoCapabilities": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "whyThisLead": {
+            "nullable": true
+          },
+          "bandReason": {
+            "type": "string"
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "signalId": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "eventDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "ageDays": {
+                  "type": "number"
+                },
+                "baseWeight": {
+                  "type": "number"
+                },
+                "halfLifeDays": {
+                  "type": "number"
+                },
+                "contribution": {
+                  "type": "number"
+                },
+                "counted": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "signalId",
+                "type",
+                "eventDate",
+                "ageDays",
+                "baseWeight",
+                "halfLifeDays",
+                "contribution",
+                "counted"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "signalId": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "eventDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "sourceName": {
+                  "type": "string"
+                },
+                "sourceUrl": {
+                  "type": "string"
+                },
+                "excerpt": {
+                  "nullable": true,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "signalId",
+                "type",
+                "eventDate",
+                "sourceName",
+                "sourceUrl",
+                "excerpt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "company": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "canonicalDomain": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "country": {
+                "nullable": true,
+                "type": "string"
+              },
+              "region": {
+                "nullable": true,
+                "type": "string"
+              },
+              "headcountBand": {
+                "nullable": true,
+                "type": "string"
+              },
+              "industry": {
+                "nullable": true,
+                "type": "string"
+              },
+              "detectedStack": {
+                "nullable": true
+              },
+              "legacyFlags": {
+                "nullable": true
+              },
+              "suppressionReason": {
+                "nullable": true,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "canonicalDomain",
+              "name",
+              "country",
+              "region",
+              "headcountBand",
+              "industry",
+              "detectedStack",
+              "legacyFlags",
+              "suppressionReason"
+            ],
+            "additionalProperties": false
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "user": {
+                  "type": "string"
+                },
+                "decision": {
+                  "type": "string"
+                },
+                "reasonCode": {
+                  "type": "string"
+                },
+                "notes": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "scoreAtDecision": {
+                  "type": "number"
+                },
+                "decidedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "user",
+                "decision",
+                "reasonCode",
+                "notes",
+                "scoreAtDecision",
+                "decidedAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "companyId",
+          "canonicalDomain",
+          "companyName",
+          "fitScore",
+          "intentScore",
+          "compoundBonus",
+          "totalScore",
+          "band",
+          "status",
+          "likelyNeed",
+          "archetype",
+          "opportunityKey",
+          "confidence",
+          "scoredAt",
+          "brief",
+          "llmClassification",
+          "rubicoCapabilities",
+          "whyThisLead",
+          "contributions",
+          "evidence",
+          "company",
+          "decisions"
+        ],
+        "additionalProperties": false
+      },
+      "LeadListResponse": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "leads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string"
+                },
+                "canonicalDomain": {
+                  "type": "string"
+                },
+                "companyName": {
+                  "type": "string"
+                },
+                "fitScore": {
+                  "type": "number"
+                },
+                "intentScore": {
+                  "type": "number"
+                },
+                "compoundBonus": {
+                  "type": "number"
+                },
+                "totalScore": {
+                  "type": "number"
+                },
+                "band": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "likelyNeed": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "archetype": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "opportunityKey": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "scoredAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "companyId",
+                "canonicalDomain",
+                "companyName",
+                "fitScore",
+                "intentScore",
+                "compoundBonus",
+                "totalScore",
+                "band",
+                "status",
+                "likelyNeed",
+                "archetype",
+                "opportunityKey",
+                "confidence",
+                "scoredAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "total",
+          "leads"
+        ],
+        "additionalProperties": false
+      },
+      "LoginBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "email",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "MeResponse": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "email",
+          "issuedAt",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "ScoringConfigPatch": {
+        "type": "object",
+        "properties": {
+          "updates": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "updates"
+        ]
+      },
+      "ScoringConfigResponse": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "updatedBy": {
+                  "nullable": true,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "key",
+                "value",
+                "updatedAt",
+                "updatedBy"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "config"
+        ],
+        "additionalProperties": false
+      },
+      "SpendResponse": {
+        "type": "object",
+        "properties": {
+          "monthToDateUsd": {
+            "type": "number"
+          },
+          "todayUsd": {
+            "type": "number"
+          },
+          "monthlyCapUsd": {
+            "type": "number"
+          },
+          "byProvider": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string"
+                },
+                "usdCost": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "provider",
+                "usdCost"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "qualifiedOpportunities": {
+            "type": "number"
+          },
+          "costPerQualifiedOpportunityUsd": {
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": [
+          "monthToDateUsd",
+          "todayUsd",
+          "monthlyCapUsd",
+          "byProvider",
+          "qualifiedOpportunities",
+          "costPerQualifiedOpportunityUsd"
+        ],
+        "additionalProperties": false
+      }
+    }
   }
 }

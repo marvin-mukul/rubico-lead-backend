@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { registeredSchemas } from './api/openapi.js';
 import { SESSION_COOKIE } from './common/auth/session.cookie.js';
 
 /**
@@ -29,11 +30,23 @@ export function buildOpenApiDocument(app: INestApplication): Record<string, unkn
     // `/internal/*` is deliberately excluded — see above.
     include: [],
     deepScanRoutes: true,
-  }) as unknown as { paths: Record<string, unknown> };
+  }) as unknown as {
+    paths: Record<string, unknown>;
+    components?: { schemas?: Record<string, unknown> };
+  };
 
   document.paths = Object.fromEntries(
     Object.entries(document.paths).filter(([path]) => path.startsWith('/api/')),
   );
+
+  // The Zod-derived components (see api/openapi.ts). Without these the
+  // document's `$ref`s dangle and `components.schemas` is empty, which is
+  // what makes openapi-typescript emit `schemas: never` and leaves the
+  // frontend with no name for any response.
+  document.components = {
+    ...document.components,
+    schemas: { ...document.components?.schemas, ...registeredSchemas() },
+  };
 
   return document as unknown as Record<string, unknown>;
 }

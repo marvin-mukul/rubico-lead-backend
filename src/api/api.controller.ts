@@ -82,8 +82,8 @@ export class AuthController {
    */
   @Post('login')
   @HttpCode(200)
-  @ApiZodBody(loginBodySchema)
-  @ApiZodOk(loginResponseSchema)
+  @ApiZodBody('LoginBody', loginBodySchema)
+  @ApiZodOk('LoginResponse', loginResponseSchema)
   async login(
     @Body(new ZodValidationPipe(loginBodySchema)) body: LoginBody,
     @Res({ passthrough: true }) response: Response,
@@ -122,7 +122,7 @@ export class AuthController {
 
   @Get('me')
   @SessionAuth()
-  @ApiZodOk(meResponseSchema)
+  @ApiZodOk('MeResponse', meResponseSchema)
   me(@CurrentSession() session: SessionClaims) {
     return {
       email: session.sub,
@@ -140,22 +140,22 @@ export class LeadsController {
 
   @Get()
   @ApiZodQuery(leadListQuerySchema)
-  @ApiZodOk(leadListResponseSchema)
+  @ApiZodOk('LeadListResponse', leadListResponseSchema)
   list(@Query(new ZodValidationPipe(leadListQuerySchema)) query: LeadListQuery) {
     return this.leads.list(query);
   }
 
   /** FR-B16: contributions come back with decay already applied. */
   @Get(':id')
-  @ApiZodOk(leadDetailResponseSchema)
+  @ApiZodOk('LeadDetail', leadDetailResponseSchema)
   detail(@Param('id') id: string) {
     return this.leads.detail(id);
   }
 
   @Post(':id/decision')
   @HttpCode(200)
-  @ApiZodBody(decisionBodySchema)
-  @ApiZodOk(decisionResponseSchema)
+  @ApiZodBody('DecisionBody', decisionBodySchema)
+  @ApiZodOk('DecisionResponse', decisionResponseSchema)
   decide(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(decisionBodySchema)) body: DecisionBody,
@@ -172,7 +172,7 @@ export class CompaniesController {
   constructor(private readonly leads: LeadsService) {}
 
   @Get(':id')
-  @ApiZodOk(companyDetailResponseSchema)
+  @ApiZodOk('CompanyDetail', companyDetailResponseSchema)
   detail(@Param('id') id: string) {
     return this.leads.company(id);
   }
@@ -186,7 +186,7 @@ export class ContactsController {
 
   @Get()
   @ApiZodQuery(contactListQuerySchema)
-  @ApiZodOk(contactListResponseSchema)
+  @ApiZodOk('ContactListResponse', contactListResponseSchema)
   list(@Query(new ZodValidationPipe(contactListQuerySchema)) query: ContactListQuery) {
     return this.contacts.listForLead(query.leadId);
   }
@@ -199,8 +199,8 @@ export class ContactsController {
   @Post()
   @HttpCode(201)
   @UseGuards(ContactResolutionGuard)
-  @ApiZodBody(createContactBodySchema)
-  @ApiZodResponse(201, contactSchema)
+  @ApiZodBody('CreateContactBody', createContactBodySchema)
+  @ApiZodResponse(201, 'Contact', contactSchema)
   create(@Body(new ZodValidationPipe(createContactBodySchema)) body: CreateContactBody) {
     return this.contacts.create(body);
   }
@@ -216,7 +216,7 @@ export class ScoringConfigController {
   ) {}
 
   @Get()
-  @ApiZodOk(scoringConfigResponseSchema)
+  @ApiZodOk('ScoringConfigResponse', scoringConfigResponseSchema)
   async get() {
     // Read the rows rather than the cache: `updatedAt` and `updatedBy` are
     // the audit trail for who last changed a weight, and the cache holds
@@ -234,8 +234,8 @@ export class ScoringConfigController {
 
   /** FR-SC3: weights and half-lives change with no deploy. */
   @Patch()
-  @ApiZodBody(scoringConfigPatchSchema)
-  @ApiZodOk(scoringConfigResponseSchema)
+  @ApiZodBody('ScoringConfigPatch', scoringConfigPatchSchema)
+  @ApiZodOk('ScoringConfigResponse', scoringConfigResponseSchema)
   async patch(
     @Body(new ZodValidationPipe(scoringConfigPatchSchema)) body: ScoringConfigPatch,
     @CurrentSession() session: SessionClaims,
