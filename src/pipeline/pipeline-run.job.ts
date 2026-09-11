@@ -13,6 +13,7 @@ import {
   type BriefRequest,
   type ClassifiableSignal,
 } from '../llm/index.js';
+import { OpportunityTriggerService } from '../opportunity/index.js';
 import { ScoringConfigService } from '../scoring-config/index.js';
 import { ScoringService } from '../scoring/index.js';
 
@@ -47,6 +48,7 @@ export class PipelineRunJob implements JobHandler {
     private readonly scoring: ScoringService,
     private readonly briefs: BriefService,
     private readonly scoringConfig: ScoringConfigService,
+    private readonly triggers: OpportunityTriggerService,
   ) {}
 
   async run(context: JobContext): Promise<void> {
@@ -147,12 +149,26 @@ export class PipelineRunJob implements JobHandler {
       hasPlatformMatch: hasPlatformMarkers(current.detectedStack),
     });
 
+    // Retained as an operator kill switch rather than a gate: with
+    // `fit.minScore` at 0 this never blocks, and industry must not be a hard
+    // exclusion (§2.5.4). The trigger below is what actually gates.
     if (!fit.passes) {
       context.count('filteredOut');
       return null;
     }
 
     const signals = await this.loadSignals(current.id);
+
+    // ── the gate (§2.2) ───────────────────────────────────────────────────
+    // Deterministic, free, and the last thing between this company and a
+    // billable call. The fit filter above scores; this decides.
+    const trigger = this.triggers.evaluate(signals);
+    if (!trigger.passed) {
+      context.count('noTrigger');
+      this.logger.debug(`${current.canonicalDomain}: no opportunity trigger matched`);
+      return null;
+    }
+
     if (context.dryRun) return null;
 
     // ── classify ──────────────────────────────────────────────────────────

@@ -54,6 +54,14 @@ export const capabilityMapSchema = z.object({
 // ── triggers.json ─────────────────────────────────────────────────────────
 export const triggerConfigSchema = z.object({
   _comment: z.string().optional(),
+  _preQualifiedComment: z.string().optional(),
+  /**
+   * Signal types whose technology relevance was already established
+   * deterministically upstream, so the gate must not re-derive it from text.
+   * S6 passed `assessRelevance` (CPV/PSC code or phrase) at ingest; S5 is
+   * direct inbound. Re-testing them only produces false negatives.
+   */
+  preQualifiedSignalTypes: z.array(z.string().min(1)).default([]),
   families: z
     .array(
       z.object({

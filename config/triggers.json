@@ -104,7 +104,10 @@
         "\\bdigital transformation\\b",
         "\\bdigitali[sz]ation\\b",
         "\\bdigitisation\\b",
-        "\\bmainframe\\b"
+        "\\bmainframe\\b",
+        "\\brewr(?:ite|ote|iting|itten)\\b",
+        "\\brebuil(?:d|t|ding)\\b",
+        "\\bport(?:ed|ing) (?:to|from)\\b"
       ]
     },
     {
@@ -127,7 +130,12 @@
         "\\bbooking system\\b",
         "\\bscheduling system\\b",
         "\\bworkflow (?:system|automation)\\b",
-        "\\bsoftware (?:development|solution|system|package|licen[cs]e)\\b"
+        "\\bsoftware (?:development|solution|system|package|licen[cs]e)\\b",
+        "\\bsoftware (?:programming|consultancy|consulting|services|engineering|support|maintenance)\\b",
+        "\\binformation systems?\\b",
+        "\\bit services\\b",
+        "\\bcomputer (?:services|systems)\\b",
+        "\\bapplication (?:software|services)\\b"
       ]
     },
     {
@@ -218,6 +226,38 @@
         "\\bframework agreement\\b.{0,40}\\b(?:software|digital|it)\\b",
         "\\bhiring\\b.{0,30}\\b(?:developer|engineer|cto|head of (?:it|engineering|digital|technology))\\b"
       ]
+    },
+    {
+      "key": "tech-roles",
+      "label": "Hiring for technology roles",
+      "archetypes": [
+        "complex_engineering",
+        "fix_slowing_software"
+      ],
+      "patterns": [
+        "\\b(?:software|backend|back-end|frontend|front-end|full ?stack|web|mobile|ios|android|devops|platform|data|qa|test|cloud|integration) (?:engineer|developer|architect)\\b",
+        "\\b(?:developer|programmer)\\b",
+        "\\bhead of (?:engineering|technology|digital|it|e-?commerce|data|product|software)\\b",
+        "\\b(?:engineering|technology|digital|software|product) (?:manager|lead|director|head)\\b",
+        "\\bcto\\b",
+        "\\bcio\\b",
+        "\\bchief (?:technology|information|digital) officer\\b",
+        "\\bit (?:manager|director|administrator|support|officer|lead)\\b",
+        "\\b(?:salesforce|sap|dynamics|sharepoint|workday|netsuite) (?:administrator|consultant|developer|analyst|manager)\\b",
+        "\\bsystems? (?:analyst|administrator|architect|engineer)\\b",
+        "\\bdigital (?:manager|lead|officer|specialist|transformation manager)\\b",
+        "\\be-?commerce (?:manager|lead|director|specialist)\\b",
+        "\\bsolutions? architect\\b",
+        "\\bdata (?:engineer|architect|analyst)\\b",
+        "\\bproduct owner\\b",
+        "\\bscrum master\\b",
+        "\\btechnical (?:lead|architect|manager)\\b"
+      ]
     }
-  ]
+  ],
+  "preQualifiedSignalTypes": [
+    "S5",
+    "S6"
+  ],
+  "_preQualifiedComment": "S6 passed assessRelevance (CPV/PSC code or technology phrase) at ingest; S5 is direct inbound. Re-testing their text in the gate only creates false negatives — a CPV-72 tender titled 'Software programming and consultancy services' was being rejected."
 }

@@ -34,6 +34,10 @@ export function testConfig(overrides: Partial<Env> = {}): AppConfigService {
     DAILY_CAP_USD: 1.5,
     PER_LEAD_BUDGET_USD: 0.1,
     PRICE_TABLE_PATH: './config/pricing.json',
+    CAPABILITY_MAP_PATH: './config/capability-map.json',
+    ARCHETYPE_PATH: './config/archetypes.json',
+    TRIGGER_PATH: './config/triggers.json',
+    EVIDENCE_PATH: './config/evidence.json',
     SEC_USER_AGENT: 'Rubico Lead Engine (test@rubico.tech)',
     ...overrides,
   } as Env;

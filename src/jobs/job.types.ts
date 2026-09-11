@@ -7,6 +7,8 @@ export interface JobCounts {
   fetched?: number;
   deduped?: number;
   filteredOut?: number;
+  /** Rejected by the opportunity trigger gate — no evidence of a tech problem. */
+  noTrigger?: number;
   suppressed?: number;
   enriched?: number;
   classified?: number;
