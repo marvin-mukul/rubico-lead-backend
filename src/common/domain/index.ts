@@ -62,6 +62,17 @@ export const DECISION_REASON_CODES = [
   'no_real_need',
   'bad_contact',
   'good',
+  // P23 (A13 — calibratable classification): the original six cannot
+  // express "right company, wrong archetype" or "no real technology need",
+  // so the trigger rules, capability map and evidence weights had no ground
+  // truth to tune against. `wrong_fit` and `no_real_need` remain as
+  // deliberately coarse fallbacks when none of these apply.
+  'wrong_archetype',
+  'no_technology_need',
+  'evidence_too_weak',
+  'wrong_capability',
+  'platform_not_problem',
+  'attribution_error',
 ] as const;
 export type DecisionReasonCode = (typeof DECISION_REASON_CODES)[number];
 
