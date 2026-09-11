@@ -38,6 +38,14 @@ const SCORING_DEFAULTS: Record<string, number> = {
   'S5.weight': 30,
   'S5.halfLifeDays': 21,
 
+  // S6 — a public procurement notice. The strongest evidence class here: an
+  // organisation stating in public, with a budget and a deadline, that it
+  // intends to buy something. Every other signal is inferred; this one is
+  // declared, so it carries the highest weight. Tenders have closing dates,
+  // so relevance falls off over a couple of months rather than a year.
+  'S6.weight': 35,
+  'S6.halfLifeDays': 45,
+
   // F-LEG — legacy stack flag. A standing property, not an event, so it
   // decays slowly and is re-verified weekly by maintenance.reverify-legacy.
   'F-LEG.weight': 15,

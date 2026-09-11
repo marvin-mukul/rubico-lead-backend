@@ -15,6 +15,13 @@ import { SourceHttpClient } from './http/source-http.client.js';
 import { IngestJobHandler } from './ingest-job.handler.js';
 import { IngestionService } from './ingestion.service.js';
 import { ProductHuntSource } from './product-hunt/product-hunt.source.js';
+import { PROCUREMENT_PROVIDER } from './procurement/procurement-provider.interface.js';
+import {
+  SamGovProvider,
+  TedProvider,
+  UkContractsFinderProvider,
+} from './procurement/procurement.providers.js';
+import { ProcurementSource } from './procurement/procurement.source.js';
 import { SecEdgarSource } from './sec-edgar/sec-edgar.source.js';
 import { SIGNAL_SOURCE, type SignalSource } from './signal-source.interface.js';
 import { SourceHealthService } from './source-health.service.js';
@@ -57,13 +64,29 @@ import { WatermarkService } from './watermark.service.js';
       useFactory: (...providers: unknown[]) => providers,
     },
 
+    UkContractsFinderProvider,
+    TedProvider,
+    SamGovProvider,
+    {
+      provide: PROCUREMENT_PROVIDER,
+      inject: [UkContractsFinderProvider, TedProvider, SamGovProvider],
+      useFactory: (...providers: unknown[]) => providers,
+    },
+
     SecEdgarSource,
     AtsSource,
     HackerNewsSource,
     ProductHuntSource,
+    ProcurementSource,
     {
       provide: SIGNAL_SOURCE,
-      inject: [SecEdgarSource, AtsSource, HackerNewsSource, ProductHuntSource],
+      inject: [
+        SecEdgarSource,
+        AtsSource,
+        HackerNewsSource,
+        ProductHuntSource,
+        ProcurementSource,
+      ],
       useFactory: (...sources: SignalSource[]) => sources,
     },
   ],
@@ -79,10 +102,18 @@ export class SourcesModule implements OnModuleInit {
     private readonly ats: AtsSource,
     private readonly hackerNews: HackerNewsSource,
     private readonly productHunt: ProductHuntSource,
+    private readonly procurement: ProcurementSource,
   ) {}
 
   onModuleInit(): void {
-    for (const source of [this.secEdgar, this.ats, this.hackerNews, this.productHunt]) {
+    const sources = [
+      this.secEdgar,
+      this.ats,
+      this.hackerNews,
+      this.productHunt,
+      this.procurement,
+    ];
+    for (const source of sources) {
       this.registry.register(
         new IngestJobHandler(source, this.ingestion, this.watermarks, this.health),
       );

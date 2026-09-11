@@ -31,6 +31,16 @@ const AGGREGATORS = new Set([
   'greenhouse.io', 'lever.co', 'ashbyhq.com', 'workable.com', 'bamboohr.com',
   'glassdoor.com', 'indeed.com', 'youtube.com', 'google.com', 'apple.com',
   'amazonaws.com', 'azurewebsites.net', 'sites.google.com', 'firebaseapp.com',
+
+  // Procurement intermediaries and shared public-sector mailboxes. A tender's
+  // contact email is the buyer's identity, so these would merge many distinct
+  // organisations into one Company. Measured over 100 UK notices:
+  // multiquote.com fronted 17 different buyers, nhs.net 5.
+  'multiquote.com', 'mercell.com', 'in-tend.co.uk', 'delta-esourcing.com',
+  'proactis.com', 'bravosolution.com', 'jaggaer.com', 'atamis.co.uk',
+  'sell2wales.gov.wales', 'publiccontractsscotland.gov.uk', 'etendersni.gov.uk',
+  'find-tender.service.gov.uk', 'contractsfinder.service.gov.uk',
+  'nhs.net', 'ukaea.uk',
 ]);
 
 export type RejectionReason =

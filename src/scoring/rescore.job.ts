@@ -42,7 +42,7 @@ weights AS (
     COALESCE(MAX(CASE WHEN key LIKE '%.weight'       THEN value END), 0) AS weight,
     COALESCE(MAX(CASE WHEN key LIKE '%.halfLifeDays' THEN value END), 0) AS half_life
   FROM "ScoringConfig"
-  WHERE key ~ '^(F-LEG|F-PLAT|S[1-5])\\.(weight|halfLifeDays)$'
+  WHERE key ~ '^(F-LEG|F-PLAT|S[1-6])\\.(weight|halfLifeDays)$'
   GROUP BY 1
 ),
 per_type AS (
@@ -69,14 +69,14 @@ intent AS (
 fresh AS (
   SELECT "companyId", MAX("eventDate") AS latest_event
   FROM "Signal"
-  WHERE type IN ('S1','S2','S3','S4','S5')
+  WHERE type IN ('S1','S2','S3','S4','S5','S6')
   GROUP BY 1
 ),
 compound AS (
   SELECT s."companyId", COUNT(DISTINCT s.type) AS distinct_types
   FROM "Signal" s
   CROSS JOIN params p
-  WHERE s.type IN ('S1','S2','S3','S4','S5')
+  WHERE s.type IN ('S1','S2','S3','S4','S5','S6')
     AND s."eventDate" >= $1::timestamptz - make_interval(days => p.compound_window::int)
     AND s."eventDate" <= $1::timestamptz
   GROUP BY 1

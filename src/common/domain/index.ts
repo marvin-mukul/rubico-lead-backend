@@ -18,11 +18,21 @@
  * and "you should throw this away", said to a company on a platform Rubico
  * staffs for.
  */
-export const SIGNAL_TYPES = ['F-LEG', 'F-PLAT', 'S1', 'S2', 'S3', 'S4', 'S5'] as const;
+export const SIGNAL_TYPES = [
+  'F-LEG',
+  'F-PLAT',
+  'S1',
+  'S2',
+  'S3',
+  'S4',
+  'S5',
+  /** S6 — public procurement notice. A DECLARED requirement, not inferred. */
+  'S6',
+] as const;
 export type SignalType = (typeof SIGNAL_TYPES)[number];
 
 /** Event signals only — `F-LEG` and `F-PLAT` are standing properties. */
-export const EVENT_SIGNAL_TYPES = ['S1', 'S2', 'S3', 'S4', 'S5'] as const;
+export const EVENT_SIGNAL_TYPES = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'] as const;
 export type EventSignalType = (typeof EVENT_SIGNAL_TYPES)[number];
 
 export const LEAD_BANDS = ['immediate', 'high', 'investigate', 'ignore'] as const;
