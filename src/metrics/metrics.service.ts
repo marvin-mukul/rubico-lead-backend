@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppConfigService } from '../common/config/app-config.service.js';
 import { SpendRepository } from '../common/metering/index.js';
 import { PrismaService } from '../common/prisma/index.js';
+import { Prisma } from '../generated/prisma/client.js';
 
 /**
  * M1–M8 (§8.3, A8: "returns M1–M8 without manual queries").
@@ -104,7 +105,14 @@ export class MetricsService {
   /** FR-B8: `job_runs.counts` is the source for the funnel. */
   private async sumJobCounts(range: FunnelRange): Promise<StageCounts> {
     const runs = await this.prisma.jobRun.findMany({
-      where: { createdAt: { gte: range.from, lte: range.to }, counts: { not: undefined } },
+      // Same `{ not: undefined }` no-op as pipeline-run's pending() had: it
+      // collapsed away and fetched every run, null counts included. Harmless
+      // here because the loop below skips them, but it fetched rows for
+      // nothing.
+      where: {
+        createdAt: { gte: range.from, lte: range.to },
+        NOT: { counts: { equals: Prisma.DbNull } },
+      },
       select: { counts: true },
     });
 

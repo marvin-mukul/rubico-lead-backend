@@ -132,22 +132,25 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
   });
 
   it('filters out a company that fails the fit filter, before any LLM call', async () => {
-    await makeCompany('Basket Weaving');
-    let classifyCalls = 0;
+    const company = await makeCompany('Basket Weaving');
+    const classified: string[] = [];
 
     const job = buildJob({
       ...keeps,
-      classify: async () => {
-        classifyCalls++;
+      classify: async (c: { id: string }) => {
+        classified.push(c.id);
         return keeps.classify();
       },
-    });
+    } as unknown as Partial<ClassifyService>);
 
     const context = new MutableJobContext('run', {}, false);
     await job.run(context);
 
     expect(context.counts.filteredOut).toBeGreaterThanOrEqual(1);
-    expect(classifyCalls).toBe(0);
+    // Asserted against this fixture rather than a global call count: the dev
+    // database also holds companies from live runs, and since P16 those come
+    // back as pending whenever their lead has no brief.
+    expect(classified).not.toContain(company.id);
   });
 
   // FR-AI5 / A6 — the refusal must stop the record before it costs anything more.
