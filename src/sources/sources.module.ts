@@ -18,6 +18,7 @@ import { ClearbitAutocompleteResolver } from './domain-resolver/clearbit-autocom
 import { DOMAIN_RESOLVER } from './domain-resolver/domain-resolver.interface.js';
 import { NullDomainResolver } from './domain-resolver/null-domain.resolver.js';
 import { FirstPartyController } from './first-party/first-party.controller.js';
+import { HackerNewsHiringSource } from './hackernews/hackernews-hiring.source.js';
 import { HackerNewsSource } from './hackernews/hackernews.source.js';
 import { SourceHttpClient } from './http/source-http.client.js';
 import { IngestJobHandler } from './ingest-job.handler.js';
@@ -96,6 +97,7 @@ import { WatermarkService } from './watermark.service.js';
     SecEdgarSource,
     AtsSource,
     HackerNewsSource,
+    HackerNewsHiringSource,
     ProductHuntSource,
     ProcurementSource,
     PressReleaseSource,
@@ -105,6 +107,7 @@ import { WatermarkService } from './watermark.service.js';
         SecEdgarSource,
         AtsSource,
         HackerNewsSource,
+        HackerNewsHiringSource,
         ProductHuntSource,
         ProcurementSource,
         PressReleaseSource,
@@ -123,6 +126,7 @@ export class SourcesModule implements OnModuleInit {
     private readonly secEdgar: SecEdgarSource,
     private readonly ats: AtsSource,
     private readonly hackerNews: HackerNewsSource,
+    private readonly hackerNewsHiring: HackerNewsHiringSource,
     private readonly productHunt: ProductHuntSource,
     private readonly procurement: ProcurementSource,
     private readonly pressRelease: PressReleaseSource,
@@ -133,6 +137,7 @@ export class SourcesModule implements OnModuleInit {
       this.secEdgar,
       this.ats,
       this.hackerNews,
+      this.hackerNewsHiring,
       this.productHunt,
       this.procurement,
       this.pressRelease,

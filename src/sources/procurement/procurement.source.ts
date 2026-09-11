@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { AppConfigService } from '../../common/config/app-config.service.js';
 import type { SignalType } from '../../common/domain/index.js';
 import type { RawSignal } from '../../signals/index.js';
 import type { SignalSource } from '../signal-source.interface.js';
@@ -34,12 +35,28 @@ export class ProcurementSource implements SignalSource {
 
   constructor(
     @Inject(PROCUREMENT_PROVIDER) private readonly providers: ProcurementProvider[],
+    private readonly config: AppConfigService,
   ) {}
 
   async fetch(since: Date): Promise<RawSignal[]> {
     const signals: RawSignal[] = [];
 
-    for (const provider of this.providers) {
+    // Which feeds run is configuration, not code (§2.3). `ted-eu` is off by
+    // default — see PROCUREMENT_FEEDS for why a working source is switched
+    // off on purpose.
+    const enabled = new Set(this.config.procurementFeeds);
+    const active = this.providers.filter((provider) => enabled.has(provider.name));
+
+    const skipped = this.providers
+      .filter((provider) => !enabled.has(provider.name))
+      .map((provider) => provider.name);
+    if (skipped.length > 0) {
+      // Logged rather than silent: a feed that is off must be visibly off,
+      // or its absence gets diagnosed as a bug months later.
+      this.logger.log(`Feeds disabled by PROCUREMENT_FEEDS: ${skipped.join(', ')}`);
+    }
+
+    for (const provider of active) {
       // Providers swallow their own failures and return []; one dead portal
       // must not cost the run the other two.
       const notices = await provider.fetchSince(since);

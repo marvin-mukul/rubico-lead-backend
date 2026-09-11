@@ -1,6 +1,8 @@
 import { assessRelevance } from './procurement-relevance.js';
 import { pickLanguage } from './procurement.providers.js';
 import type { ProcurementNotice } from './procurement-provider.interface.js';
+import { envSchema } from '../../common/config/env.schema.js';
+import { testConfig } from '../../../test/support/config.factory.js';
 import { ProcurementSource } from './procurement.source.js';
 import type { ProcurementProvider } from './procurement-provider.interface.js';
 
@@ -125,8 +127,18 @@ describe('ProcurementSource', () => {
   const provider = (name: ProcurementProvider['name'], notices: ProcurementNotice[]) =>
     ({ name, fetchSince: async () => notices }) satisfies ProcurementProvider;
 
+  /**
+   * All three feeds enabled. These tests are about attribution and relevance,
+   * not about which feeds are switched on — the feed switch has its own test.
+   */
+  const sourceWith = (providers: ProcurementProvider[]) =>
+    new ProcurementSource(
+      providers,
+      testConfig({ PROCUREMENT_FEEDS: 'uk-contracts-finder,ted-eu,sam-gov' }),
+    );
+
   it('emits S6 signals carrying the buyer email as the domain', async () => {
-    const source = new ProcurementSource([provider('uk-contracts-finder', [notice()])]);
+    const source = sourceWith([provider('uk-contracts-finder', [notice()])]);
     const [signal] = await source.fetch(new Date('2026-09-01'));
 
     expect(signal.type).toBe('S6');
@@ -139,7 +151,7 @@ describe('ProcurementSource', () => {
   });
 
   it('drops a notice with no contact email rather than guessing a domain', async () => {
-    const source = new ProcurementSource([
+    const source = sourceWith([
       provider('ted-eu', [notice({ buyerEmail: undefined })]),
     ]);
     // An unattributable tender is the sec-edgar failure repeated; better to
@@ -148,7 +160,7 @@ describe('ProcurementSource', () => {
   });
 
   it('drops notices that are not technology work', async () => {
-    const source = new ProcurementSource([
+    const source = sourceWith([
       provider('uk-contracts-finder', [
         notice({ title: 'Kingsmoore Ward Refurbishment works', classification: '45453100' }),
       ]),
@@ -157,7 +169,7 @@ describe('ProcurementSource', () => {
   });
 
   it('includes the contract value in the excerpt when present', async () => {
-    const source = new ProcurementSource([
+    const source = sourceWith([
       provider('uk-contracts-finder', [notice({ valueAmount: 92295.28, valueCurrency: 'GBP' })]),
     ]);
     const [signal] = await source.fetch(new Date('2026-09-01'));
@@ -166,7 +178,7 @@ describe('ProcurementSource', () => {
   });
 
   it('keeps going when one feed is empty', async () => {
-    const source = new ProcurementSource([
+    const source = sourceWith([
       provider('sam-gov', []),
       provider('ted-eu', [notice({ id: 'n2' })]),
     ]);
@@ -174,7 +186,79 @@ describe('ProcurementSource', () => {
   });
 
   it('declares S6 as its only signal type', () => {
-    expect(new ProcurementSource([]).signalTypes).toEqual(['S6']);
-    expect(new ProcurementSource([]).name).toBe('procurement');
+    expect(sourceWith([]).signalTypes).toEqual(['S6']);
+    expect(sourceWith([]).name).toBe('procurement');
+  });
+});
+
+/**
+ * Which feeds run is configuration, not code.
+ *
+ * `ted-eu` is off by default, and that is a targeting decision: it works and
+ * it found 612 organisations, but they are European public bodies that buy
+ * through tender rather than through outbound email. For a US-focused engine
+ * it was 95% of the corpus and none of the addressable market.
+ */
+describe('PROCUREMENT_FEEDS', () => {
+  const notice = (overrides: Partial<ProcurementNotice> = {}): ProcurementNotice => ({
+    id: 'n1',
+    buyerName: 'Acme Council',
+    buyerEmail: 'it@acme.gov.uk',
+    title: 'Managed IT Services Provision',
+    publishedAt: new Date('2026-09-10T00:00:00Z'),
+    noticeUrl: 'https://example.test/notice/1',
+    classification: '72000000',
+    ...overrides,
+  });
+
+  const provider = (name: ProcurementProvider['name']) =>
+    ({ name, fetchSince: async () => [notice({ id: name })] }) satisfies ProcurementProvider;
+
+  const all: ProcurementProvider[] = [
+    provider('uk-contracts-finder'),
+    provider('ted-eu'),
+    provider('sam-gov'),
+  ];
+
+  const namesFrom = async (feeds: string) => {
+    const source = new ProcurementSource(all, testConfig({ PROCUREMENT_FEEDS: feeds }));
+    const signals = await source.fetch(new Date('2026-09-01'));
+    return new Set(signals.map((signal) => (signal.raw as { feed?: string }).feed ?? signal.subject));
+  };
+
+  it('runs only the feeds it is given', async () => {
+    const source = new ProcurementSource(
+      all,
+      testConfig({ PROCUREMENT_FEEDS: 'uk-contracts-finder,sam-gov' }),
+    );
+    const signals = await source.fetch(new Date('2026-09-01'));
+    // Two providers ran, one notice each; ted-eu contributed nothing.
+    expect(signals).toHaveLength(2);
+  });
+
+  it('runs every feed when all three are enabled', async () => {
+    const source = new ProcurementSource(
+      all,
+      testConfig({ PROCUREMENT_FEEDS: 'uk-contracts-finder,ted-eu,sam-gov' }),
+    );
+    expect(await source.fetch(new Date('2026-09-01'))).toHaveLength(3);
+  });
+
+  it('disables procurement entirely when the list is empty', async () => {
+    const source = new ProcurementSource(all, testConfig({ PROCUREMENT_FEEDS: '' }));
+    expect(await source.fetch(new Date('2026-09-01'))).toEqual([]);
+  });
+
+  /**
+   * Asserted against the SCHEMA's default, not the test factory's copy of it.
+   * The factory hardcodes an env object, so testing through it would only
+   * prove the factory agrees with itself — and the shipped default is the
+   * whole targeting decision.
+   */
+  it('excludes ted-eu by default', () => {
+    const shipped = envSchema.shape.PROCUREMENT_FEEDS.parse(undefined);
+    expect(shipped).not.toContain('ted-eu');
+    expect(shipped).toContain('sam-gov');
+    void namesFrom;
   });
 });
