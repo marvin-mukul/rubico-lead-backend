@@ -20,13 +20,13 @@ export class MetricsController {
   /** A8: M1–M8 without manual queries. */
   @Get('funnel')
   @ApiZodQuery(metricsRangeQuerySchema)
-  @ApiZodOk(funnelResponseSchema)
+  @ApiZodOk('FunnelResponse', funnelResponseSchema)
   funnel(@Query(new ZodValidationPipe(metricsRangeQuerySchema)) query: MetricsRangeQuery) {
     return this.metrics.funnel(this.metrics.resolveRange(query.from, query.to));
   }
 
   @Get('spend')
-  @ApiZodOk(spendResponseSchema)
+  @ApiZodOk('SpendResponse', spendResponseSchema)
   spend() {
     return this.metrics.spendSummary();
   }

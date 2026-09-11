@@ -30,20 +30,83 @@ export function openApiSchema(schema: ZodType, io: 'input' | 'output' = 'output'
   return z.toJSONSchema(schema, { target: 'openapi-3.0', io }) as OpenApiSchema;
 }
 
-/** Documents a request body from its Zod schema. */
-export const ApiZodBody = (schema: ZodType) =>
-  applyDecorators(ApiBody({ schema: openApiSchema(schema, 'input') }));
+/**
+ * Named schema components (FR-B18).
+ *
+ * Inlining every schema at its call site produces a valid document that is
+ * useless to a client generator: `components.schemas` comes out empty, so
+ * `openapi-typescript` emits `schemas: never` and the frontend has no name
+ * for any response it receives. Its alternative is to hand-write the shapes,
+ * which is precisely what frontend FR-W7 forbids.
+ *
+ * So every documented body and response is registered under a name and
+ * referenced by `$ref`. The registry is populated as the decorators evaluate
+ * — that is, when the controller module is imported — and merged into the
+ * document by `buildOpenApiDocument`.
+ */
+const schemaComponents = new Map<string, OpenApiSchema>();
 
-/** Documents a 200 response from its Zod schema. */
-export const ApiZodOk = (schema: ZodType, description?: string) =>
+/**
+ * Registers `schema` as a component and returns a `$ref` to it.
+ *
+ * A name used twice for different shapes is thrown on rather than resolved by
+ * last-write-wins: the two call sites would silently agree on whichever
+ * module happened to be imported second, and the frontend would generate one
+ * type for two different payloads. Input and output views of the same Zod
+ * schema genuinely differ (see `openApiSchema`), so they must be given
+ * different names.
+ */
+function registerSchema(name: string, schema: ZodType, io: 'input' | 'output'): OpenApiSchema {
+  const generated = openApiSchema(schema, io);
+  const existing = schemaComponents.get(name);
+
+  if (existing && JSON.stringify(existing) !== JSON.stringify(generated)) {
+    throw new Error(
+      `OpenAPI component '${name}' was registered twice with different shapes. ` +
+        'Give the input and output views different names.',
+    );
+  }
+
+  schemaComponents.set(name, generated);
+  return { $ref: `#/components/schemas/${name}` };
+}
+
+/** Everything registered so far. Read by `buildOpenApiDocument`. */
+export const registeredSchemas = (): Record<string, OpenApiSchema> =>
+  Object.fromEntries([...schemaComponents].sort(([a], [b]) => a.localeCompare(b)));
+
+/**
+ * Documents a request body from its Zod schema, under a component name.
+ *
+ * The name is required, not optional. An optional name is an invitation to
+ * leave one endpoint inlined, and one unnamed response is enough to send the
+ * frontend back to hand-written types for that screen.
+ */
+export const ApiZodBody = (name: string, schema: ZodType) =>
+  applyDecorators(ApiBody({ schema: registerSchema(name, schema, 'input') }));
+
+/** Documents a 200 response from its Zod schema, under a component name. */
+export const ApiZodOk = (name: string, schema: ZodType, description?: string) =>
   applyDecorators(
-    ApiOkResponse({ schema: openApiSchema(schema), ...(description ? { description } : {}) }),
+    ApiOkResponse({
+      schema: registerSchema(name, schema, 'output'),
+      ...(description ? { description } : {}),
+    }),
   );
 
-/** Documents any status from its Zod schema. */
-export const ApiZodResponse = (status: number, schema: ZodType, description?: string) =>
+/** Documents any status from its Zod schema, under a component name. */
+export const ApiZodResponse = (
+  status: number,
+  name: string,
+  schema: ZodType,
+  description?: string,
+) =>
   applyDecorators(
-    ApiResponse({ status, schema: openApiSchema(schema), ...(description ? { description } : {}) }),
+    ApiResponse({
+      status,
+      schema: registerSchema(name, schema, 'output'),
+      ...(description ? { description } : {}),
+    }),
   );
 
 /**
