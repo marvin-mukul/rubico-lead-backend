@@ -16,8 +16,17 @@ export type { SignalSource } from './signal-source.interface.js';
 export type { DomainResolver } from './domain-resolver/domain-resolver.interface.js';
 export type { IndexRow } from './sec-edgar/sec-edgar.source.js';
 export { AtsSource } from './ats/ats.source.js';
-export { GreenhouseProvider, LeverProvider, AshbyProvider } from './ats/ats.providers.js';
+export {
+  GreenhouseProvider,
+  LeverProvider,
+  AshbyProvider,
+  WorkableProvider,
+  SmartRecruitersProvider,
+  RecruiteeProvider,
+} from './ats/ats.providers.js';
+export { ATS_PROVIDER } from './ats/ats-provider.interface.js';
 export type { AtsProvider, AtsPosting } from './ats/ats-provider.interface.js';
+export { AtsSlugDiscoveryEnricher, candidateSlugs } from './ats/ats-slug-discovery.enricher.js';
 export { HackerNewsSource } from './hackernews/hackernews.source.js';
 export { ProductHuntSource } from './product-hunt/product-hunt.source.js';
 export { FirstPartyController, firstPartyBodySchema } from './first-party/first-party.controller.js';
