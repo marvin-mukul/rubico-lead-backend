@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { briefSchema, classificationSchema, whyThisLeadStepSchema } from '../llm/schemas.js';
+import { EVIDENCE_LEVELS } from '../opportunity/index.js';
 import {
   DECISION_REASON_CODES,
   DECISION_VALUES,
@@ -67,6 +68,7 @@ export const metaResponseSchema = z.object({
   decisionValues: z.array(z.enum(DECISION_VALUES)),
   reasonCodes: z.array(z.enum(DECISION_REASON_CODES)),
   signalTypes: z.array(z.enum(SIGNAL_TYPES)),
+  evidenceLevels: z.array(z.enum(EVIDENCE_LEVELS)),
   eventSignalTypes: z.array(z.enum(EVENT_SIGNAL_TYPES)),
   suppressionReasons: z.array(z.enum(SUPPRESSION_REASONS)),
 });
@@ -121,6 +123,12 @@ export const contributionSchema = z.object({
   ageDays: z.number(),
   baseWeight: z.number(),
   halfLifeDays: z.number(),
+  // P20: the evidence axis. These were being SENT and not declared, so the
+  // frontend's generated types could not see them — an under-declared
+  // contract is as broken as a wrong one, just harder to notice. Without
+  // them a reviewer cannot tell why a weight-15 signal contributed 3.7.
+  evidenceStrength: z.enum(EVIDENCE_LEVELS),
+  evidenceMultiplier: z.number(),
   contribution: z.number(),
   counted: z.boolean(),
 });

@@ -1248,6 +1248,19 @@
                 "halfLifeDays": {
                   "type": "number"
                 },
+                "evidenceStrength": {
+                  "type": "string",
+                  "enum": [
+                    "E0",
+                    "E1",
+                    "E2",
+                    "E3",
+                    "E4"
+                  ]
+                },
+                "evidenceMultiplier": {
+                  "type": "number"
+                },
                 "contribution": {
                   "type": "number"
                 },
@@ -1262,6 +1275,8 @@
                 "ageDays",
                 "baseWeight",
                 "halfLifeDays",
+                "evidenceStrength",
+                "evidenceMultiplier",
                 "contribution",
                 "counted"
               ],
@@ -1705,6 +1720,19 @@
               ]
             }
           },
+          "evidenceLevels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "E0",
+                "E1",
+                "E2",
+                "E3",
+                "E4"
+              ]
+            }
+          },
           "eventSignalTypes": {
             "type": "array",
             "items": {
@@ -1739,6 +1767,7 @@
           "decisionValues",
           "reasonCodes",
           "signalTypes",
+          "evidenceLevels",
           "eventSignalTypes",
           "suppressionReasons"
         ],
