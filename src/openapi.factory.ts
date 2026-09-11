@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SESSION_COOKIE } from './common/auth/session.cookie.js';
 
 /**
  * FR-B17/FR-B18: the frontend generates its types from this document. It is
@@ -14,11 +15,14 @@ export function buildOpenApiDocument(app: INestApplication): Record<string, unkn
   const config = new DocumentBuilder()
     .setTitle('Rubico Lead Engine API')
     .setDescription(
-      'Consumed by the Next.js server layer only. The browser never calls these ' +
-        'routes directly (§8.3).',
+      'Consumed by the React dashboard SPA, served same-origin behind a proxy. ' +
+        'Authenticated by an httpOnly session cookie (§8.3).',
     )
     .setVersion('0.1.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer' }, 'session')
+    // Both transports the SessionGuard accepts. The cookie is what the
+    // browser SPA uses; the bearer scheme stays for scripts and tests.
+    .addCookieAuth(SESSION_COOKIE, { type: 'apiKey', in: 'cookie' }, 'session')
+    .addBearerAuth({ type: 'http', scheme: 'bearer' }, 'sessionBearer')
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {

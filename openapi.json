@@ -38,7 +38,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "token": {
+                    "email": {
                       "type": "string"
                     },
                     "expiresAt": {
@@ -48,7 +48,7 @@
                     }
                   },
                   "required": [
-                    "token",
+                    "email",
                     "expiresAt"
                   ],
                   "additionalProperties": false
@@ -1383,7 +1383,7 @@
   },
   "info": {
     "title": "Rubico Lead Engine API",
-    "description": "Consumed by the Next.js server layer only. The browser never calls these routes directly (§8.3).",
+    "description": "Consumed by the React dashboard SPA, served same-origin behind a proxy. Authenticated by an httpOnly session cookie (§8.3).",
     "version": "0.1.0",
     "contact": {}
   },
@@ -1392,6 +1392,11 @@
   "components": {
     "securitySchemes": {
       "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "rle_session"
+      },
+      "sessionBearer": {
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
