@@ -2,9 +2,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AppConfigService } from '../../common/config/app-config.service.js';
 import { MeteredClient } from '../../common/metering/index.js';
 import { PrismaService } from '../../common/prisma/index.js';
+import { OpportunityConfigService } from '../../opportunity/index.js';
 import { buildClassifyPrompt, type ClassifiableCompany, type ClassifiableSignal } from '../classify/classify.service.js';
 import { LLM_BRIEF_PROVIDER, type LlmProvider } from '../llm-provider.interface.js';
-import { BRIEF_SYSTEM_PROMPT } from '../prompts.js';
+import { buildBriefSystemPrompt } from '../prompts.js';
 import { briefSchema, type Brief } from '../schemas.js';
 import { validateBrief, type BriefDefect } from './brief-validation.js';
 
@@ -26,13 +27,18 @@ export interface BriefOutcome {
 @Injectable()
 export class BriefService {
   private readonly logger = new Logger(BriefService.name);
+  /** Built once from static config (P22) — see ClassifyService for why this still caches. */
+  private readonly systemPrompt: string;
 
   constructor(
     @Inject(LLM_BRIEF_PROVIDER) private readonly provider: LlmProvider,
     private readonly metered: MeteredClient,
     private readonly config: AppConfigService,
     private readonly prisma: PrismaService,
-  ) {}
+    opportunityConfig: OpportunityConfigService,
+  ) {
+    this.systemPrompt = buildBriefSystemPrompt(opportunityConfig);
+  }
 
   /**
    * FR-AI3: one batch submission for the whole run when LLM_BRIEF_BATCH is
@@ -46,7 +52,7 @@ export class BriefService {
 
     const args = requests.map((request) => ({
       key: request.leadId,
-      system: BRIEF_SYSTEM_PROMPT,
+      system: this.systemPrompt,
       user: buildBriefPrompt(request),
       schema: briefSchema,
       model,

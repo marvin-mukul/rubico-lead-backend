@@ -1,32 +1,49 @@
 import { z } from 'zod';
+import { testConfig } from '../../../test/support/config.factory.js';
 import { AppConfigService } from '../../common/config/app-config.service.js';
 import { MeteredClient } from '../../common/metering/index.js';
 import { PrismaService } from '../../common/prisma/index.js';
+import { OpportunityConfigService } from '../../opportunity/index.js';
 import { toGeminiSchema } from '../gemini/gemini.provider.js';
 import { LLM_CLASSIFY_PROVIDER, type LlmProvider } from '../llm-provider.interface.js';
-import { CLASSIFY_SYSTEM_PROMPT } from '../prompts.js';
+import { buildClassifySystemPrompt } from '../prompts.js';
 import { briefSchema, classificationSchema, type Classification } from '../schemas.js';
 import { ClassifyService, buildClassifyPrompt } from './classify.service.js';
 
 void LLM_CLASSIFY_PROVIDER;
+
+const opportunityConfig = new OpportunityConfigService(testConfig());
+const CLASSIFY_SYSTEM_PROMPT = buildClassifySystemPrompt(opportunityConfig);
 
 const service = new ClassifyService(
   null as unknown as LlmProvider,
   null as unknown as MeteredClient,
   null as unknown as AppConfigService,
   null as unknown as PrismaService,
+  opportunityConfig,
 );
 
 const classification = (overrides: Partial<Classification> = {}): Classification => ({
   has_rubico_opportunity: true,
   evidence_sufficient: true,
   likely_need: 'Modernise an ASP.NET Web Forms product',
-  rubico_service: 'legacy-modernisation',
+  archetype: 'fix_slowing_software',
+  rubico_capabilities: ['Legacy modernisation'],
+  why_this_lead: [
+    {
+      observation: 'Active hiring for engineering roles',
+      implies: 'The team cannot keep pace with the existing codebase',
+      capability: 'Legacy modernisation',
+      signal_ids: ['sig_1'],
+    },
+  ],
   confidence: 'medium',
   reasoning: 'Legacy stack plus active hiring.',
   cited_signal_ids: ['sig_1'],
   ...overrides,
 });
+
+const KNOWN_IDS = new Set(['sig_1']);
 
 /**
  * Acceptance A6: "Classifier returns `false` for a deliberately irrelevant
@@ -36,13 +53,13 @@ const classification = (overrides: Partial<Classification> = {}): Classification
  */
 describe('ClassifyService.evaluate (FR-AI5)', () => {
   it('keeps a company with a real, evidenced opportunity', () => {
-    const outcome = service.evaluate(classification());
+    const outcome = service.evaluate(classification(), KNOWN_IDS);
     expect(outcome.keep).toBe(true);
     expect(outcome.discardReason).toBeUndefined();
   });
 
   it('discards when there is no Rubico opportunity', () => {
-    const outcome = service.evaluate(classification({ has_rubico_opportunity: false }));
+    const outcome = service.evaluate(classification({ has_rubico_opportunity: false }), KNOWN_IDS);
     expect(outcome.keep).toBe(false);
     expect(outcome.discardReason).toBe('no_rubico_opportunity');
   });
@@ -50,6 +67,7 @@ describe('ClassifyService.evaluate (FR-AI5)', () => {
   it('discards when the evidence is too thin, even if the fit looks fine', () => {
     const outcome = service.evaluate(
       classification({ has_rubico_opportunity: true, evidence_sufficient: false }),
+      KNOWN_IDS,
     );
     expect(outcome.keep).toBe(false);
     expect(outcome.discardReason).toBe('insufficient_evidence');
@@ -59,8 +77,38 @@ describe('ClassifyService.evaluate (FR-AI5)', () => {
     expect(
       service.evaluate(
         classification({ has_rubico_opportunity: false, evidence_sufficient: false }),
+        KNOWN_IDS,
       ).keep,
     ).toBe(false);
+  });
+
+  // P22: FR-AI6 extended to the why-this-lead chain — a hallucinated citation
+  // discards the record before scoring, the same as a brief's bad citation.
+  it('discards when cited_signal_ids names an id that is not a real signal', () => {
+    const outcome = service.evaluate(
+      classification({ cited_signal_ids: ['sig_invented'] }),
+      KNOWN_IDS,
+    );
+    expect(outcome.keep).toBe(false);
+    expect(outcome.discardReason).toBe('invalid_citation');
+  });
+
+  it('discards when a why_this_lead step cites an id that is not a real signal', () => {
+    const outcome = service.evaluate(
+      classification({
+        why_this_lead: [
+          {
+            observation: 'x',
+            implies: 'y',
+            capability: 'z',
+            signal_ids: ['sig_invented'],
+          },
+        ],
+      }),
+      KNOWN_IDS,
+    );
+    expect(outcome.keep).toBe(false);
+    expect(outcome.discardReason).toBe('invalid_citation');
   });
 });
 
@@ -77,7 +125,9 @@ describe('classification schema (FR-AI2)', () => {
       has_rubico_opportunity: false,
       evidence_sufficient: false,
       likely_need: '',
-      rubico_service: 'none',
+      archetype: 'none',
+      rubico_capabilities: [],
+      why_this_lead: [],
       confidence: 'high',
       reasoning: 'A pre-product hardware startup; nothing Rubico sells applies.',
       cited_signal_ids: [],
@@ -85,9 +135,28 @@ describe('classification schema (FR-AI2)', () => {
     expect(refusal.success).toBe(true);
   });
 
-  it('rejects an invented service name rather than passing it downstream', () => {
+  it('rejects an invented archetype rather than passing it downstream', () => {
     expect(
-      classificationSchema.safeParse({ ...classification(), rubico_service: 'blockchain' }).success,
+      classificationSchema.safeParse({ ...classification(), archetype: 'blockchain' }).success,
+    ).toBe(false);
+  });
+
+  it('accepts ai_code_to_production — the hero offer the old enum had no room for', () => {
+    expect(
+      classificationSchema.safeParse(classification({ archetype: 'ai_code_to_production' }))
+        .success,
+    ).toBe(true);
+  });
+
+  it('requires each why_this_lead step to cite at least one signal', () => {
+    expect(
+      classificationSchema.safeParse(
+        classification({
+          why_this_lead: [
+            { observation: 'x', implies: 'y', capability: 'z', signal_ids: [] },
+          ],
+        }),
+      ).success,
     ).toBe(false);
   });
 });

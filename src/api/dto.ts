@@ -46,7 +46,9 @@ export const leadSummarySchema = z.object({
   band: z.string(),
   status: z.string(),
   likelyNeed: z.string().nullable(),
-  rubicoService: z.string().nullable(),
+  // P22: replaces the old five-value rubico_service enum — see archetypes.json.
+  archetype: z.string().nullable(),
+  opportunityKey: z.string(),
   confidence: z.string().nullable(),
   scoredAt: z.iso.datetime(),
 });
@@ -85,6 +87,10 @@ export const evidenceSchema = z.object({
 export const leadDetailResponseSchema = leadSummarySchema.extend({
   brief: z.unknown().nullable(),
   llmClassification: z.unknown().nullable(),
+  // P22: the why-this-lead chain (§2.5.7) — observation -> implies ->
+  // capability, each step cited. Empty when there is no confirmed archetype.
+  rubicoCapabilities: z.array(z.string()).nullable(),
+  whyThisLead: z.unknown().nullable(),
   bandReason: z.string().optional(),
   contributions: z.array(contributionSchema),
   evidence: z.array(evidenceSchema),
@@ -246,7 +252,7 @@ export const digestResponseSchema = z.object({
       band: z.string(),
       totalScore: z.number(),
       likelyNeed: z.string().nullable(),
-      rubicoService: z.string().nullable(),
+      archetype: z.string().nullable(),
       headline: z.string().nullable(),
       topEvidenceUrl: z.string().nullable(),
     }),
