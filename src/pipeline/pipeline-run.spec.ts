@@ -7,6 +7,10 @@ import { FitFilterService } from '../companies/index.js';
 import type { EnrichmentService } from '../enrichment/index.js';
 import { MutableJobContext } from '../jobs/index.js';
 import type { BriefRequest, BriefService, ClassifyService } from '../llm/index.js';
+import {
+  OpportunityConfigService,
+  OpportunityTriggerService,
+} from '../opportunity/index.js';
 import { ScoringConfigService } from '../scoring-config/index.js';
 import { ScoringService } from '../scoring/index.js';
 import { CompoundService } from '../signals/index.js';
@@ -51,6 +55,9 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
           eventDate: new Date(Date.now() - i * 86400000),
           sourceUrl: 'https://example.test/1',
           sourceName: 'fixture',
+          // The trigger gate reads signal text, so a fixture with no excerpt
+          // is correctly rejected before reaching the classifier.
+          excerpt: 'Legacy CRM replacement and website rebuild',
           raw: {},
           dedupeHash: randomUUID(),
         },
@@ -71,6 +78,7 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
       scoring,
       briefs as BriefService,
       new ScoringConfigService(prisma),
+      new OpportunityTriggerService(new OpportunityConfigService(testConfig())),
     );
 
   const keeps = {

@@ -1,5 +1,6 @@
 export { OpportunityModule } from './opportunity.module.js';
 export { OpportunityConfigService } from './opportunity-config.service.js';
+export { OpportunityTriggerService } from './trigger.service.js';
 export {
   ARCHETYPE_KEYS,
   EVIDENCE_LEVELS,
@@ -18,6 +19,11 @@ export type {
   TriggerConfig,
   EvidenceConfig,
 } from './opportunity-config.schemas.js';
+export type {
+  TriggerableSignal,
+  TriggerMatch,
+  TriggerVerdict,
+} from './trigger.service.js';
 export type {
   CompiledTriggerFamily,
   CompiledEvidenceOverride,
