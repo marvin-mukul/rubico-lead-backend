@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { DECISION_REASON_CODES, LEAD_BANDS, LEAD_STATUSES } from '../common/domain/index.js';
+import {
+  DECISION_REASON_CODES,
+  DECISION_VALUES,
+  LEAD_BANDS,
+  LEAD_STATUSES,
+  SIGNAL_TYPES,
+  SUPPRESSION_REASONS,
+} from '../common/domain/index.js';
 
 /**
  * Every `/api/*` DTO, declared once. Zod validates at runtime and the
@@ -49,8 +56,12 @@ export const leadSummarySchema = z.object({
   intentScore: z.number(),
   compoundBonus: z.number(),
   totalScore: z.number(),
-  band: z.string(),
-  status: z.string(),
+  // Enumerated, not `z.string()`. These are closed sets and the server only
+  // ever returns a member — widening them here would publish a contract that
+  // says otherwise, and frontend FR-W30 forbids the client re-declaring the
+  // list it was not told. Same reasoning for every enum below.
+  band: z.enum(LEAD_BANDS),
+  status: z.enum(LEAD_STATUSES),
   likelyNeed: z.string().nullable(),
   // P22: replaces the old five-value rubico_service enum — see archetypes.json.
   archetype: z.string().nullable(),
@@ -72,7 +83,7 @@ export const leadListResponseSchema = z.object({
  */
 export const contributionSchema = z.object({
   signalId: z.string(),
-  type: z.string(),
+  type: z.enum(SIGNAL_TYPES),
   eventDate: z.iso.datetime(),
   ageDays: z.number(),
   baseWeight: z.number(),
@@ -83,7 +94,7 @@ export const contributionSchema = z.object({
 
 export const evidenceSchema = z.object({
   signalId: z.string(),
-  type: z.string(),
+  type: z.enum(SIGNAL_TYPES),
   eventDate: z.iso.datetime(),
   sourceName: z.string(),
   sourceUrl: z.string(),
@@ -110,14 +121,14 @@ export const leadDetailResponseSchema = leadSummarySchema.extend({
     industry: z.string().nullable(),
     detectedStack: z.unknown().nullable(),
     legacyFlags: z.unknown().nullable(),
-    suppressionReason: z.string().nullable(),
+    suppressionReason: z.enum(SUPPRESSION_REASONS).nullable(),
   }),
   decisions: z.array(
     z.object({
       id: z.string(),
       user: z.string(),
-      decision: z.string(),
-      reasonCode: z.string(),
+      decision: z.enum(DECISION_VALUES),
+      reasonCode: z.enum(DECISION_REASON_CODES),
       notes: z.string().nullable(),
       scoreAtDecision: z.number(),
       decidedAt: z.iso.datetime(),
@@ -126,14 +137,14 @@ export const leadDetailResponseSchema = leadSummarySchema.extend({
 });
 
 export const decisionBodySchema = z.object({
-  decision: z.enum(['approved', 'rejected']),
+  decision: z.enum(DECISION_VALUES),
   reasonCode: z.enum(DECISION_REASON_CODES),
   notes: z.string().max(2000).optional(),
 });
 
 export const decisionResponseSchema = z.object({
   leadId: z.string(),
-  status: z.string(),
+  status: z.enum(DECISION_VALUES),
   scoreAtDecision: z.number(),
   decidedAt: z.iso.datetime(),
 });
@@ -151,7 +162,7 @@ export const companyDetailResponseSchema = z.object({
   legacyFlags: z.unknown().nullable(),
   atsProvider: z.string().nullable(),
   atsSlug: z.string().nullable(),
-  suppressionReason: z.string().nullable(),
+  suppressionReason: z.enum(SUPPRESSION_REASONS).nullable(),
   firstSeenAt: z.iso.datetime(),
   lastEnrichedAt: z.iso.datetime().nullable(),
   signals: z.array(evidenceSchema),

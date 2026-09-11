@@ -488,7 +488,13 @@
           },
           "suppressionReason": {
             "nullable": true,
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "client",
+              "competitor",
+              "rejected",
+              "do-not-contact"
+            ]
           },
           "firstSeenAt": {
             "type": "string",
@@ -510,7 +516,18 @@
                   "type": "string"
                 },
                 "type": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "F-LEG",
+                    "F-PLAT",
+                    "S1",
+                    "S2",
+                    "S3",
+                    "S4",
+                    "S5",
+                    "S6",
+                    "S7"
+                  ]
                 },
                 "eventDate": {
                   "type": "string",
@@ -754,7 +771,11 @@
             "type": "string"
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ]
           },
           "scoreAtDecision": {
             "type": "number"
@@ -887,10 +908,21 @@
             "type": "number"
           },
           "band": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "immediate",
+              "high",
+              "investigate",
+              "ignore"
+            ]
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "new",
+              "approved",
+              "rejected"
+            ]
           },
           "likelyNeed": {
             "nullable": true,
@@ -940,7 +972,18 @@
                   "type": "string"
                 },
                 "type": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "F-LEG",
+                    "F-PLAT",
+                    "S1",
+                    "S2",
+                    "S3",
+                    "S4",
+                    "S5",
+                    "S6",
+                    "S7"
+                  ]
                 },
                 "eventDate": {
                   "type": "string",
@@ -985,7 +1028,18 @@
                   "type": "string"
                 },
                 "type": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "F-LEG",
+                    "F-PLAT",
+                    "S1",
+                    "S2",
+                    "S3",
+                    "S4",
+                    "S5",
+                    "S6",
+                    "S7"
+                  ]
                 },
                 "eventDate": {
                   "type": "string",
@@ -1050,7 +1104,13 @@
               },
               "suppressionReason": {
                 "nullable": true,
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "client",
+                  "competitor",
+                  "rejected",
+                  "do-not-contact"
+                ]
               }
             },
             "required": [
@@ -1079,10 +1139,28 @@
                   "type": "string"
                 },
                 "decision": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "approved",
+                    "rejected"
+                  ]
                 },
                 "reasonCode": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "wrong_fit",
+                    "stale",
+                    "already_known",
+                    "no_real_need",
+                    "bad_contact",
+                    "good",
+                    "wrong_archetype",
+                    "no_technology_need",
+                    "evidence_too_weak",
+                    "wrong_capability",
+                    "platform_not_problem",
+                    "attribution_error"
+                  ]
                 },
                 "notes": {
                   "nullable": true,
@@ -1179,10 +1257,21 @@
                   "type": "number"
                 },
                 "band": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "immediate",
+                    "high",
+                    "investigate",
+                    "ignore"
+                  ]
                 },
                 "status": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "approved",
+                    "rejected"
+                  ]
                 },
                 "likelyNeed": {
                   "nullable": true,
