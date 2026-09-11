@@ -262,6 +262,29 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
     expect(scored.has(poison)).toBe(false);
   });
 
+  // Marking a company examined is bookkeeping, and bookkeeping must never
+  // take down a run that has already done its real work. A company can be
+  // gone by the time the mark happens — deleted, or merged into another
+  // domain — and `company.update()` throws on a missing row, aborting the
+  // whole batch. `updateMany` no-ops instead.
+  it('survives a company disappearing between pending() and the mark', async () => {
+    const company = await makeCompany('SaaS');
+
+    const job = buildJob({
+      classify: async (subject: { id: string }) => {
+        if (subject.id === company.id) {
+          await prisma.signal.deleteMany({ where: { companyId: company.id } });
+          await prisma.company.delete({ where: { id: company.id } });
+        }
+        return keeps.classify();
+      },
+      saveToLead: async () => undefined,
+    } as unknown as Partial<ClassifyService>);
+
+    const context = new MutableJobContext('run', {}, false);
+    await expect(job.run(context)).resolves.toBeUndefined();
+  });
+
   // P21 (§2.4) — a company already holding a briefed lead for one archetype
   // must still surface a genuinely different opportunity, as a second row.
   it('gives a company a second lead when a new archetype is classified', async () => {
@@ -313,19 +336,24 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
       },
     });
 
-    let briefCalls = 0;
+    const briefedLeadIds: string[] = [];
     const job = buildJob(keeps, {
       generate: async (requests: BriefRequest[]) => {
-        briefCalls += requests.length;
+        briefedLeadIds.push(...requests.map((r) => r.leadId));
         return requests.map((r) => ({ leadId: r.leadId, brief: {} as never }));
       },
     });
 
     await job.run(new MutableJobContext('run', {}, false));
 
-    expect(briefCalls).toBe(0);
     const leads = await prisma.lead.findMany({ where: { companyId: company.id } });
     expect(leads).toHaveLength(1);
+    // Scoped to this fixture rather than counting every brief in the batch.
+    // The dev database also holds companies from live source runs, and now
+    // that `pending()` round-robins, a different 200 of them share this
+    // batch — some legitimately needing a first brief. The claim under test
+    // is that THIS already-briefed opportunity is not briefed again.
+    expect(briefedLeadIds).not.toContain(leads[0].id);
   });
 
   it('writes nothing on a dry run', async () => {

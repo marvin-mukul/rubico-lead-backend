@@ -86,6 +86,11 @@ const SCORING_DEFAULTS: Record<string, number> = {
   'evidence.E3.multiplier': 2,
   'evidence.E4.multiplier': 2,
 
+  // How many companies pipeline.run examines per run. Safe as a throughput
+  // control only because pending() orders by lastPipelineRunAt ascending —
+  // with the old firstSeenAt ordering this was a permanent cut-off.
+  'pipeline.batchLimit': 200,
+
   // ── Score composition ────────────────────────────────────────────────────
   // total = fit * fitWeight + intent * intentWeight + compoundBonus, clamped
   // to 0..100. Fit is 0..100 on its own, so it is halved to leave room for
