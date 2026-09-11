@@ -195,3 +195,123 @@ describe('OpenAPI generation (§9, FR-B17)', () => {
     expect(JSON.stringify(openApiSchema(leadListQuerySchema))).not.toContain('$schema');
   });
 });
+
+/**
+ * P8 — the filters §6.3 asks for, which did not exist until the frontend
+ * needed them.
+ *
+ * The date range and signal-type filters constrain the company's SIGNALS, not
+ * the lead row, and the distinction is the whole point: `scoredAt` moves every
+ * night when the rescore runs, so a "last 14 days" filter over it answers
+ * "when did the job last run" rather than "what happened recently".
+ */
+describe('GET /api/leads — date range, signal type and sort (§6.3) [integration]', () => {
+  let prisma: PrismaService;
+  let leads: LeadsService;
+  const companyIds: string[] = [];
+
+  /** A lead whose only signal is `type`, `ageDays` old. */
+  const seed = async (type: string, ageDays: number, totalScore: number) => {
+    const company = await prisma.company.create({
+      data: { canonicalDomain: `filter-${randomUUID()}.test`, name: 'Filter Fixture' },
+    });
+    companyIds.push(company.id);
+    await prisma.signal.create({
+      data: {
+        companyId: company.id,
+        type,
+        eventDate: new Date(Date.now() - ageDays * 86_400_000),
+        sourceUrl: 'https://example.test/1',
+        sourceName: 'fixture',
+        raw: {},
+        dedupeHash: randomUUID(),
+      },
+    });
+    return prisma.lead.create({
+      data: {
+        companyId: company.id,
+        fitScore: 10,
+        intentScore: totalScore - 10,
+        totalScore,
+        band: 'high',
+        scoredAt: new Date(Date.now() - ageDays * 86_400_000),
+      },
+    });
+  };
+
+  const ymd = (daysAgo: number) =>
+    new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
+
+  let recent: { id: string };
+  let old: { id: string };
+
+  beforeAll(async () => {
+    prisma = new PrismaService(testConfig());
+    await prisma.onModuleInit();
+    const config = new ScoringConfigService(prisma);
+    leads = new LeadsService(
+      prisma,
+      new ScoringService(
+        prisma,
+        config,
+        new CompoundService(prisma, config),
+        new OpportunityConfigService(testConfig()),
+      ),
+    );
+    recent = await seed('S2', 2, 71);
+    old = await seed('S6', 200, 72);
+  });
+
+  afterAll(async () => {
+    await prisma.lead.deleteMany({ where: { companyId: { in: companyIds } } });
+    await prisma.signal.deleteMany({ where: { companyId: { in: companyIds } } });
+    await prisma.company.deleteMany({ where: { id: { in: companyIds } } });
+    await prisma.onModuleDestroy();
+  });
+
+  const ids = async (query: Partial<Parameters<LeadsService['list']>[0]>) => {
+    const page = await leads.list({ page: 1, pageSize: 100, sort: 'score', ...query } as never);
+    return new Set(page.leads.map((lead) => lead.id));
+  };
+
+  it('filters to leads with a signal inside the date range', async () => {
+    const inWindow = await ids({ from: ymd(7) });
+    expect(inWindow.has(recent.id)).toBe(true);
+    expect(inWindow.has(old.id)).toBe(false);
+  });
+
+  it('includes the whole of the `to` day, not up to its midnight', async () => {
+    // The recent signal is 2 days old; a `to` of exactly that date must
+    // include it. A naive `lte` on the parsed date would exclude everything
+    // that happened during the day the reviewer asked for.
+    const upToThatDay = await ids({ from: ymd(3), to: ymd(2) });
+    expect(upToThatDay.has(recent.id)).toBe(true);
+  });
+
+  it('filters by signal type', async () => {
+    expect((await ids({ signalType: 'S2' })).has(recent.id)).toBe(true);
+    expect((await ids({ signalType: 'S2' })).has(old.id)).toBe(false);
+    expect((await ids({ signalType: 'S6' })).has(old.id)).toBe(true);
+  });
+
+  // Two `some` clauses would match a company with an old S2 and an unrelated
+  // recent S6 — which is not what "an S2 in the last fortnight" means.
+  it('requires ONE signal to satisfy both the type and the date range', async () => {
+    const both = await ids({ signalType: 'S6', from: ymd(7) });
+    expect(both.has(old.id)).toBe(false);
+    expect(both.has(recent.id)).toBe(false);
+  });
+
+  it('sorts by score or by recency', async () => {
+    const byScore = await leads.list({ page: 1, pageSize: 100, sort: 'score' } as never);
+    const byRecency = await leads.list({ page: 1, pageSize: 100, sort: 'recency' } as never);
+
+    const scorePos = (id: string) => byScore.leads.findIndex((lead) => lead.id === id);
+    const recencyPos = (id: string) => byRecency.leads.findIndex((lead) => lead.id === id);
+
+    // `old` outscores `recent` (72 vs 71) but was scored 200 days earlier, so
+    // the two orders must disagree about them.
+    expect(scorePos(old.id)).toBeLessThan(scorePos(recent.id));
+    expect(recencyPos(recent.id)).toBeLessThan(recencyPos(old.id));
+  });
+});

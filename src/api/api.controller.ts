@@ -27,6 +27,7 @@ import {
   DECISION_VALUES,
   EVENT_SIGNAL_TYPES,
   LEAD_BANDS,
+  LEAD_SORTS,
   LEAD_STATUSES,
   SIGNAL_TYPES,
   SUPPRESSION_REASONS,
@@ -165,6 +166,7 @@ export class MetaController {
       evidenceLevels: [...EVIDENCE_LEVELS],
       eventSignalTypes: [...EVENT_SIGNAL_TYPES],
       suppressionReasons: [...SUPPRESSION_REASONS],
+      leadSorts: [...LEAD_SORTS],
     };
   }
 }

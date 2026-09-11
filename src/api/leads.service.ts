@@ -3,6 +3,13 @@ import { PrismaService } from '../common/prisma/index.js';
 import { ScoringService } from '../scoring/index.js';
 import type { DecisionBody, LeadListQuery } from './dto.js';
 
+/** Midnight after `date` (YYYY-MM-DD), so a `to` bound includes its own day. */
+function nextDay(date: string): Date {
+  const midnight = new Date(`${date}T00:00:00.000Z`);
+  midnight.setUTCDate(midnight.getUTCDate() + 1);
+  return midnight;
+}
+
 @Injectable()
 export class LeadsService {
   constructor(
@@ -11,17 +18,57 @@ export class LeadsService {
   ) {}
 
   async list(query: LeadListQuery) {
+    /**
+     * The date range and signal-type filters both constrain the company's
+     * SIGNALS, not the lead row.
+     *
+     * `scoredAt` would be the easy field to filter on and the wrong one:
+     * every lead is rescored nightly, so a "last 14 days" filter over it
+     * returns everything or nothing depending on when the job last ran. The
+     * question a reviewer is actually asking — what happened recently — is
+     * answered by the event dates of the evidence.
+     *
+     * One `some` clause holding both, deliberately. Two separate `some`
+     * clauses would match a company with an old S2 and an unrelated recent
+     * S6, which is not what "an S2 in the last fortnight" means.
+     */
+    const signalWindow = {
+      ...(query.signalType ? { type: query.signalType } : {}),
+      ...(query.from ?? query.to ?
+        {
+          eventDate: {
+            ...(query.from ? { gte: new Date(query.from) } : {}),
+            // Inclusive of the whole `to` day: a bare date parses as
+            // midnight, so `lte` on it would exclude everything that
+            // happened during the day the reviewer asked for.
+            ...(query.to ? { lt: nextDay(query.to) } : {}),
+          },
+        }
+      : {}),
+    };
+
     const where = {
       ...(query.band ? { band: query.band } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.minScore === undefined ? {} : { totalScore: { gte: query.minScore } }),
+      ...(Object.keys(signalWindow).length > 0 ?
+        { company: { signals: { some: signalWindow } } }
+      : {}),
     };
+
+    // `recency` orders by when the lead was last scored, which for a nightly
+    // rescore is "most recently changed". Score stays the tiebreak either
+    // way, so two leads from the same run read in a stable order.
+    const orderBy =
+      query.sort === 'recency' ?
+        ([{ scoredAt: 'desc' }, { totalScore: 'desc' }] as const)
+      : ([{ totalScore: 'desc' }, { scoredAt: 'desc' }] as const);
 
     const [total, rows] = await Promise.all([
       this.prisma.lead.count({ where }),
       this.prisma.lead.findMany({
         where,
-        orderBy: [{ totalScore: 'desc' }, { scoredAt: 'desc' }],
+        orderBy: [...orderBy],
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
         include: { company: { select: { canonicalDomain: true, name: true } } },

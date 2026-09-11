@@ -53,6 +53,10 @@ export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export const DECISION_VALUES = ['approved', 'rejected'] as const;
 export type DecisionValue = (typeof DECISION_VALUES)[number];
 
+/** Sort orders `GET /api/leads` offers (frontend §6.3). */
+export const LEAD_SORTS = ['score', 'recency'] as const;
+export type LeadSort = (typeof LEAD_SORTS)[number];
+
 export const JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed', 'skipped'] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 

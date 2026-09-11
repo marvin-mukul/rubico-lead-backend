@@ -6,6 +6,7 @@ import {
   DECISION_VALUES,
   EVENT_SIGNAL_TYPES,
   LEAD_BANDS,
+  LEAD_SORTS,
   LEAD_STATUSES,
   SIGNAL_TYPES,
   SUPPRESSION_REASONS,
@@ -71,6 +72,7 @@ export const metaResponseSchema = z.object({
   evidenceLevels: z.array(z.enum(EVIDENCE_LEVELS)),
   eventSignalTypes: z.array(z.enum(EVENT_SIGNAL_TYPES)),
   suppressionReasons: z.array(z.enum(SUPPRESSION_REASONS)),
+  leadSorts: z.array(z.enum(LEAD_SORTS)),
 });
 
 // ── leads ───────────────────────────────────────────────────────────────
@@ -78,6 +80,19 @@ export const leadListQuerySchema = z.object({
   band: z.enum(LEAD_BANDS).optional(),
   status: z.enum(LEAD_STATUSES).optional(),
   minScore: z.coerce.number().int().min(0).max(100).optional(),
+  /**
+   * Date range over the *signal's event date*, not `scoredAt`.
+   *
+   * The question a reviewer asks is "what happened in the last fortnight",
+   * and `scoredAt` answers a different one — every lead is rescored nightly,
+   * so filtering on it would return everything or nothing depending on when
+   * the job last ran.
+   */
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional(),
+  /** Leads carrying at least one signal of this type. */
+  signalType: z.enum(SIGNAL_TYPES).optional(),
+  sort: z.enum(LEAD_SORTS).default('score'),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
