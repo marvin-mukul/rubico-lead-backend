@@ -29,6 +29,7 @@ import {
   EVENT_SIGNAL_TYPES,
   LEAD_BANDS,
   LEAD_SORTS,
+  PRIORITY_BANDS,
   LEAD_STATUSES,
   SIGNAL_TYPES,
   SUPPRESSION_REASONS,
@@ -160,6 +161,7 @@ export class MetaController {
   get() {
     return {
       bands: [...LEAD_BANDS],
+      priorityBands: [...PRIORITY_BANDS],
       leadStatuses: [...LEAD_STATUSES],
       decisionValues: [...DECISION_VALUES],
       reasonCodes: [...DECISION_REASON_CODES],
