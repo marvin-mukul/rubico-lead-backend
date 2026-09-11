@@ -966,10 +966,198 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
           },
           "brief": {
-            "nullable": true
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "headline": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "One line: who they are and why now."
+              },
+              "claims": {
+                "minItems": 1,
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "claim": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 400
+                    },
+                    "signal_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Must be an id from the SIGNALS block."
+                    }
+                  },
+                  "required": [
+                    "claim",
+                    "signal_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "suggested_opening_line": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400,
+                "description": "FR-AI7: must reference only cited evidence."
+              },
+              "opening_line_signal_ids": {
+                "minItems": 1,
+                "maxItems": 5,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "risks": {
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 300
+                },
+                "description": "Reasons this might not be a fit."
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              }
+            },
+            "required": [
+              "headline",
+              "claims",
+              "suggested_opening_line",
+              "opening_line_signal_ids",
+              "risks",
+              "confidence"
+            ],
+            "additionalProperties": false
           },
           "llmClassification": {
-            "nullable": true
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "has_rubico_opportunity": {
+                "type": "boolean",
+                "description": "False when the company is outside the ICP or needs nothing Rubico sells."
+              },
+              "evidence_sufficient": {
+                "type": "boolean",
+                "description": "False when the signals are too thin to justify a human looking at this."
+              },
+              "likely_need": {
+                "type": "string",
+                "maxLength": 300,
+                "description": "One sentence on what this company probably needs. Empty when there is no opportunity."
+              },
+              "archetype": {
+                "type": "string",
+                "enum": [
+                  "idea_to_product",
+                  "ai_code_to_production",
+                  "fix_slowing_software",
+                  "complex_engineering",
+                  "none"
+                ],
+                "description": "The closest archetype, or \"none\"."
+              },
+              "rubico_capabilities": {
+                "default": [],
+                "description": "Specific Rubico capabilities that apply, e.g. \"Laravel\", \"AI-generated code hardening\".",
+                "maxItems": 6,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                }
+              },
+              "why_this_lead": {
+                "default": [],
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "observation": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "description": "What the evidence shows, plainly."
+                    },
+                    "implies": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "description": "What technology problem that suggests."
+                    },
+                    "capability": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120,
+                      "description": "The specific Rubico capability that addresses it (from the capability map)."
+                    },
+                    "signal_ids": {
+                      "minItems": 1,
+                      "maxItems": 6,
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Ids from the SIGNALS block supporting this step. Must be non-empty."
+                    }
+                  },
+                  "required": [
+                    "observation",
+                    "implies",
+                    "capability",
+                    "signal_ids"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "reasoning": {
+                "type": "string",
+                "maxLength": 600,
+                "description": "Why, in two sentences at most."
+              },
+              "cited_signal_ids": {
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "has_rubico_opportunity",
+              "evidence_sufficient",
+              "likely_need",
+              "archetype",
+              "rubico_capabilities",
+              "why_this_lead",
+              "confidence",
+              "reasoning",
+              "cited_signal_ids"
+            ],
+            "additionalProperties": false
           },
           "rubicoCapabilities": {
             "nullable": true,
@@ -979,7 +1167,47 @@
             }
           },
           "whyThisLead": {
-            "nullable": true
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "observation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "What the evidence shows, plainly."
+                },
+                "implies": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "What technology problem that suggests."
+                },
+                "capability": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120,
+                  "description": "The specific Rubico capability that addresses it (from the capability map)."
+                },
+                "signal_ids": {
+                  "minItems": 1,
+                  "maxItems": 6,
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Ids from the SIGNALS block supporting this step. Must be non-empty."
+                }
+              },
+              "required": [
+                "observation",
+                "implies",
+                "capability",
+                "signal_ids"
+              ],
+              "additionalProperties": false
+            }
           },
           "bandReason": {
             "type": "string"

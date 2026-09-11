@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { briefSchema, classificationSchema, whyThisLeadStepSchema } from '../llm/schemas.js';
 import {
   DECISION_REASON_CODES,
   DECISION_VALUES,
@@ -134,12 +135,23 @@ export const evidenceSchema = z.object({
 });
 
 export const leadDetailResponseSchema = leadSummarySchema.extend({
-  brief: z.unknown().nullable(),
-  llmClassification: z.unknown().nullable(),
+  /**
+   * The real shapes, not `z.unknown()`.
+   *
+   * These are stored as Prisma Json columns, which is why they were typed as
+   * unknown — but the LLM schemas that produced them are right here, and the
+   * writer validates against them before persisting. Publishing `unknown`
+   * told the frontend nothing, and frontend FR-W13 ("every factual claim must
+   * be visibly traceable to a source URL") cannot be built against it: the
+   * client would have to re-declare the claim shape by hand to reach
+   * `signal_id`, which is exactly what FR-W7 forbids.
+   */
+  brief: briefSchema.nullable(),
+  llmClassification: classificationSchema.nullable(),
   // P22: the why-this-lead chain (§2.5.7) — observation -> implies ->
   // capability, each step cited. Empty when there is no confirmed archetype.
   rubicoCapabilities: z.array(z.string()).nullable(),
-  whyThisLead: z.unknown().nullable(),
+  whyThisLead: z.array(whyThisLeadStepSchema).nullable(),
   bandReason: z.string().optional(),
   contributions: z.array(contributionSchema),
   evidence: z.array(evidenceSchema),
