@@ -238,8 +238,11 @@
                             "nullable": true,
                             "type": "string"
                           },
-                          "rubicoService": {
+                          "archetype": {
                             "nullable": true,
+                            "type": "string"
+                          },
+                          "opportunityKey": {
                             "type": "string"
                           },
                           "confidence": {
@@ -264,7 +267,8 @@
                           "band",
                           "status",
                           "likelyNeed",
-                          "rubicoService",
+                          "archetype",
+                          "opportunityKey",
                           "confidence",
                           "scoredAt"
                         ],
@@ -344,8 +348,11 @@
                       "nullable": true,
                       "type": "string"
                     },
-                    "rubicoService": {
+                    "archetype": {
                       "nullable": true,
+                      "type": "string"
+                    },
+                    "opportunityKey": {
                       "type": "string"
                     },
                     "confidence": {
@@ -361,6 +368,16 @@
                       "nullable": true
                     },
                     "llmClassification": {
+                      "nullable": true
+                    },
+                    "rubicoCapabilities": {
+                      "nullable": true,
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "whyThisLead": {
                       "nullable": true
                     },
                     "bandReason": {
@@ -557,11 +574,14 @@
                     "band",
                     "status",
                     "likelyNeed",
-                    "rubicoService",
+                    "archetype",
+                    "opportunityKey",
                     "confidence",
                     "scoredAt",
                     "brief",
                     "llmClassification",
+                    "rubicoCapabilities",
+                    "whyThisLead",
                     "contributions",
                     "evidence",
                     "company",
@@ -613,7 +633,13 @@
                       "already_known",
                       "no_real_need",
                       "bad_contact",
-                      "good"
+                      "good",
+                      "wrong_archetype",
+                      "no_technology_need",
+                      "evidence_too_weak",
+                      "wrong_capability",
+                      "platform_not_problem",
+                      "attribution_error"
                     ]
                   },
                   "notes": {
