@@ -3,7 +3,14 @@ import { SIGNAL_TYPES, type SignalType } from '../common/domain/index.js';
 import { PrismaService } from '../common/prisma/index.js';
 import { ScoringConfigService } from '../scoring-config/index.js';
 import { CompoundService } from '../signals/index.js';
-import { score, type ScorableSignal, type ScoreResult, type ScoringParameters } from './score.js';
+import { OpportunityConfigService } from '../opportunity/index.js';
+import {
+  score,
+  type EvidenceStrength,
+  type ScorableSignal,
+  type ScoreResult,
+  type ScoringParameters,
+} from './score.js';
 
 @Injectable()
 export class ScoringService {
@@ -13,6 +20,7 @@ export class ScoringService {
     private readonly prisma: PrismaService,
     private readonly config: ScoringConfigService,
     private readonly compound: CompoundService,
+    private readonly opportunity: OpportunityConfigService,
   ) {}
 
   /** Reads every scoring knob out of `scoring_config` (FR-SC3). */
@@ -35,6 +43,17 @@ export class ScoringService {
         investigate: await this.config.get('band.investigate.min', 30),
       },
       eventSignalFreshnessDays: await this.config.get('scoring.eventSignalFreshnessDays', 30),
+      // Multipliers are numeric, so they live in scoring_config and a human
+      // can PATCH them (FR-SC3). The ceilings are a mapping, so they live in
+      // evidence.json (§2.3).
+      evidenceMultipliers: {
+        E0: await this.config.get('evidence.E0.multiplier', 0.25),
+        E1: await this.config.get('evidence.E1.multiplier', 1),
+        E2: await this.config.get('evidence.E2.multiplier', 1.5),
+        E3: await this.config.get('evidence.E3.multiplier', 2),
+        E4: await this.config.get('evidence.E4.multiplier', 2),
+      },
+      evidenceCeilings: this.opportunity.evidence.bandCeiling as ScoringParameters['evidenceCeilings'],
     };
   }
 
@@ -48,7 +67,7 @@ export class ScoringService {
       this.parameters(),
       this.prisma.signal.findMany({
         where: { companyId },
-        select: { id: true, type: true, eventDate: true },
+        select: { id: true, type: true, eventDate: true, evidenceStrength: true },
       }),
       this.compound.evaluate(companyId, now),
     ]);
@@ -57,6 +76,7 @@ export class ScoringService {
       id: row.id,
       type: row.type as SignalType,
       eventDate: row.eventDate,
+      evidenceStrength: (row.evidenceStrength ?? 'E0') as EvidenceStrength,
     }));
 
     return score({ fitScore, signals, compoundBonus: compound.bonus, now }, params);

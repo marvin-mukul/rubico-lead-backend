@@ -23,13 +23,22 @@ const PARAMS: ScoringParameters = {
   intentWeight: 1,
   bands: { immediate: 70, high: 50, investigate: 30 },
   eventSignalFreshnessDays: 30,
+  evidenceMultipliers: { E0: 0.25, E1: 1, E2: 1.5, E3: 2, E4: 2 },
+  evidenceCeilings: {
+    E0: 'ignore',
+    E1: 'investigate',
+    E2: 'high',
+    E3: 'immediate',
+    E4: 'immediate',
+  },
 };
 
-const signal = (type: ScorableSignal['type'], days: number, id = `${type}-${days}`) => ({
-  id,
-  type,
-  eventDate: daysAgo(days),
-});
+const signal = (
+  type: ScorableSignal['type'],
+  days: number,
+  id = `${type}-${days}`,
+  evidenceStrength: ScorableSignal['evidenceStrength'] = 'E1',
+): ScorableSignal => ({ id, type, eventDate: daysAgo(days), evidenceStrength });
 
 describe('decay (§12)', () => {
   it('at t=0 equals the base weight', () => {
@@ -91,8 +100,16 @@ describe('score (§12)', () => {
   });
 
   it('bands normally once a fresh event signal exists', () => {
+    // E3 evidence, so the ceiling permits `immediate`. With only E1 (an
+    // inferred initiative such as a job posting) this same company would
+    // correctly cap at `investigate` — see the ceiling suite below.
     const result = score(
-      { fitScore: 80, signals: [signal('S1', 1), signal('S2', 5)], compoundBonus: 5, now: NOW },
+      {
+        fitScore: 80,
+        signals: [signal('S1', 1, 'a', 'E3'), signal('S2', 5, 'b', 'E3')],
+        compoundBonus: 5,
+        now: NOW,
+      },
       PARAMS,
     );
     expect(result.bandReason).toBeUndefined();
@@ -172,5 +189,75 @@ describe('bandFor', () => {
     expect(bandFor(69, bands)).toBe('high');
     expect(bandFor(49, bands)).toBe('investigate');
     expect(bandFor(29, bands)).toBe('ignore');
+  });
+});
+
+/**
+ * §2.5.3 made mechanical: contextual evidence can strengthen a real
+ * opportunity but must never create one. That is a statement about
+ * reachability, so it is a ceiling rather than a weight — otherwise enough
+ * weak signals sum their way into `high`.
+ */
+describe('evidence band ceiling (P20)', () => {
+  const perfect = { fitScore: 100, compoundBonus: 10, now: NOW };
+
+  it('caps a perfect-scoring company at ignore when all it has is E0 context', () => {
+    const result = score(
+      { ...perfect, signals: [signal('S1', 0, 'a', 'E0'), signal('S2', 0, 'b', 'E0')] },
+      PARAMS,
+    );
+    expect(result.totalScore).toBeGreaterThan(PARAMS.bands.immediate);
+    expect(result.band).toBe('ignore');
+    expect(result.bandReason).toMatch(/E0/);
+  });
+
+  it.each([
+    ['E1', 'investigate'],
+    ['E2', 'high'],
+    ['E3', 'immediate'],
+    ['E4', 'immediate'],
+  ] as const)('caps %s at %s', (strength, expected) => {
+    const result = score({ ...perfect, signals: [signal('S1', 0, 'a', strength)] }, PARAMS);
+    expect(result.band).toBe(expected);
+  });
+
+  it('uses the STRONGEST evidence, not the newest or the most common', () => {
+    const result = score(
+      {
+        ...perfect,
+        signals: [
+          signal('S1', 0, 'ctx1', 'E0'),
+          signal('S2', 0, 'ctx2', 'E0'),
+          signal('S6', 5, 'tender', 'E3'),
+        ],
+      },
+      PARAMS,
+    );
+    expect(result.band).toBe('immediate');
+  });
+
+  it('leaves a band alone when the score is already below the ceiling', () => {
+    // E3 permits `immediate`, but a weak score should still band low and
+    // carry no cap explanation. The signal must be FRESH, or FR-SC4 fires
+    // first and supplies its own reason — freshness outranks the ceiling.
+    const result = score(
+      { fitScore: 0, compoundBonus: 0, now: NOW, signals: [signal('S4', 0, 'weak', 'E3')] },
+      PARAMS,
+    );
+    expect(result.band).not.toBe('immediate');
+    expect(result.bandReason).toBeUndefined();
+  });
+
+  it('multiplies a contribution by its evidence strength', () => {
+    const weak = score({ fitScore: 0, compoundBonus: 0, now: NOW, signals: [signal('S1', 0, 'w', 'E0')] }, PARAMS);
+    const strong = score({ fitScore: 0, compoundBonus: 0, now: NOW, signals: [signal('S1', 0, 's', 'E3')] }, PARAMS);
+    expect(weak.intentScore).toBeCloseTo(25 * 0.25, 10);
+    expect(strong.intentScore).toBeCloseTo(25 * 2, 10);
+  });
+
+  it('reports the strength on every contribution, so it is explainable', () => {
+    const result = score({ ...perfect, signals: [signal('S6', 1, 'x', 'E3')] }, PARAMS);
+    expect(result.contributions[0].evidenceStrength).toBe('E3');
+    expect(result.contributions[0].evidenceMultiplier).toBe(2);
   });
 });

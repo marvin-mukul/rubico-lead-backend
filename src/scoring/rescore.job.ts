@@ -33,7 +33,12 @@ WITH params AS (
     COALESCE(MAX(CASE WHEN key = 'compound.windowDays'             THEN value END), 90) AS compound_window,
     COALESCE(MAX(CASE WHEN key = 'compound.minDistinctTypes'       THEN value END),  2) AS compound_min,
     COALESCE(MAX(CASE WHEN key = 'compound.perExtraType'           THEN value END),  5) AS compound_per,
-    COALESCE(MAX(CASE WHEN key = 'compound.bonus'                  THEN value END), 10) AS compound_cap
+    COALESCE(MAX(CASE WHEN key = 'compound.bonus'                  THEN value END), 10) AS compound_cap,
+    COALESCE(MAX(CASE WHEN key = 'evidence.E0.multiplier'          THEN value END), 0.25) AS ev_m0,
+    COALESCE(MAX(CASE WHEN key = 'evidence.E1.multiplier'          THEN value END),  1) AS ev_m1,
+    COALESCE(MAX(CASE WHEN key = 'evidence.E2.multiplier'          THEN value END),  1.5) AS ev_m2,
+    COALESCE(MAX(CASE WHEN key = 'evidence.E3.multiplier'          THEN value END),  2) AS ev_m3,
+    COALESCE(MAX(CASE WHEN key = 'evidence.E4.multiplier'          THEN value END),  2) AS ev_m4
   FROM "ScoringConfig"
 ),
 weights AS (
@@ -50,18 +55,35 @@ per_type AS (
     s."companyId",
     s.type,
     MAX(
-      CASE
+      (CASE
         -- A non-positive half-life means "does not decay", matching decay().
         WHEN w.half_life > 0 THEN w.weight * power(
           0.5,
           GREATEST(0, EXTRACT(EPOCH FROM ($1::timestamptz - s."eventDate")) / 86400.0) / w.half_life
         )
         ELSE w.weight
-      END
+      END)
+      -- Evidence multiplier applied INSIDE the MAX, so "strongest signal of
+      -- each type" ranks on the final contribution, exactly as score.ts does.
+      * (CASE COALESCE(s."evidenceStrength", 'E0')
+           WHEN 'E1' THEN p.ev_m1 WHEN 'E2' THEN p.ev_m2
+           WHEN 'E3' THEN p.ev_m3 WHEN 'E4' THEN p.ev_m4
+           ELSE p.ev_m0 END)
     ) AS contribution
   FROM "Signal" s
   JOIN weights w ON w.type = s.type
+  CROSS JOIN params p
   GROUP BY 1, 2
+),
+-- §2.5.3: the strongest evidence a company holds caps the band it can reach.
+strongest_evidence AS (
+  SELECT
+    "companyId",
+    MAX(CASE COALESCE("evidenceStrength", 'E0')
+          WHEN 'E4' THEN 4 WHEN 'E3' THEN 3 WHEN 'E2' THEN 2 WHEN 'E1' THEN 1 ELSE 0 END
+    ) AS ev_rank
+  FROM "Signal"
+  GROUP BY 1
 ),
 intent AS (
   SELECT "companyId", SUM(contribution) AS intent_score FROM per_type GROUP BY 1
@@ -90,6 +112,7 @@ scored AS (
       GREATEST(0, COALESCE(c.distinct_types, 0) - p.compound_min + 1) * p.compound_per
     ) AS compound_bonus,
     f.latest_event,
+    COALESCE(e.ev_rank, 0) AS ev_rank,
     p.fit_weight, p.intent_weight, p.freshness_days,
     p.band_immediate, p.band_high, p.band_investigate,
     l."fitScore" AS fit_score
@@ -98,6 +121,7 @@ scored AS (
   LEFT JOIN intent   i ON i."companyId" = l."companyId"
   LEFT JOIN compound c ON c."companyId" = l."companyId"
   LEFT JOIN fresh    f ON f."companyId" = l."companyId"
+  LEFT JOIN strongest_evidence e ON e."companyId" = l."companyId"
 ),
 final AS (
   SELECT
@@ -116,10 +140,17 @@ SET "intentScore"   = f.intent_score,
       WHEN f.latest_event IS NULL
         OR f.latest_event < $1::timestamptz - make_interval(days => f.freshness_days::int)
         THEN 'ignore'
-      WHEN f.total_score >= f.band_immediate    THEN 'immediate'
-      WHEN f.total_score >= f.band_high         THEN 'high'
-      WHEN f.total_score >= f.band_investigate  THEN 'investigate'
-      ELSE 'ignore'
+      ELSE (ARRAY['ignore','investigate','high','immediate'])[
+        LEAST(
+          -- band the score alone would give
+          CASE WHEN f.total_score >= f.band_immediate   THEN 3
+               WHEN f.total_score >= f.band_high        THEN 2
+               WHEN f.total_score >= f.band_investigate THEN 1
+               ELSE 0 END,
+          -- ceiling from the strongest evidence (E0->ignore .. E3/E4->immediate)
+          CASE f.ev_rank WHEN 0 THEN 0 WHEN 1 THEN 1 WHEN 2 THEN 2 ELSE 3 END
+        ) + 1
+      ]
     END,
     "scoredAt"      = $1::timestamptz
 FROM final f

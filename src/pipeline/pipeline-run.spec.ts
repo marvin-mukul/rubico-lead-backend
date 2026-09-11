@@ -101,7 +101,12 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
     prisma = new PrismaService(testConfig());
     await prisma.onModuleInit();
     const config = new ScoringConfigService(prisma);
-    scoring = new ScoringService(prisma, config, new CompoundService(prisma, config));
+    scoring = new ScoringService(
+      prisma,
+      config,
+      new CompoundService(prisma, config),
+      new OpportunityConfigService(testConfig()),
+    );
   });
 
   afterEach(async () => {

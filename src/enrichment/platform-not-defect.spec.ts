@@ -5,6 +5,7 @@ import { SignalRepository } from '../signals/index.js';
 import type { CompanyModel as Company } from '../generated/prisma/models.js';
 import type { Enricher, EnrichmentResult } from './enricher.interface.js';
 import { EnrichmentService } from './enrichment.service.js';
+import { EvidenceService, OpportunityConfigService } from '../opportunity/index.js';
 
 /**
  * A12 — "No company on WordPress, WooCommerce, Shopify or Magento 2 produces
@@ -29,7 +30,7 @@ describe('platform is not a defect (A12) [integration]', () => {
   });
 
   const serviceReturning = (result: EnrichmentResult) =>
-    new EnrichmentService([fixedEnricher(result)], prisma, new SignalRepository(prisma));
+    new EnrichmentService([fixedEnricher(result)], prisma, new SignalRepository(prisma, new EvidenceService(new OpportunityConfigService(testConfig()))));
 
   const makeCompany = async (): Promise<Company> => {
     const company = await prisma.company.create({

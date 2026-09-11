@@ -4,6 +4,7 @@ import { testConfig } from '../../test/support/config.factory.js';
 import { PrismaService } from '../common/prisma/index.js';
 import { CompoundService } from './compound.service.js';
 import { SignalRepository } from './signal.repository.js';
+import { EvidenceService, OpportunityConfigService } from '../opportunity/index.js';
 
 const CONFIG = {
   'compound.windowDays': 90,
@@ -73,7 +74,7 @@ describe('CompoundService — over real signals [integration]', () => {
   beforeAll(async () => {
     prisma = new PrismaService(testConfig());
     await prisma.onModuleInit();
-    signals = new SignalRepository(prisma);
+    signals = new SignalRepository(prisma, new EvidenceService(new OpportunityConfigService(testConfig())));
     service = new CompoundService(prisma, fakeScoringConfig(CONFIG));
   });
 

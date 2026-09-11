@@ -11,6 +11,10 @@ export interface SignalWeight {
   halfLifeDays: number;
 }
 
+/** E0..E4 — see EvidenceService. Kept as a plain string union here so the
+ *  scoring functions stay free of any import beyond common/domain. */
+export type EvidenceStrength = 'E0' | 'E1' | 'E2' | 'E3' | 'E4';
+
 export interface ScoringParameters {
   /** Per signal type. A type with no entry contributes nothing. */
   weights: Partial<Record<SignalType, SignalWeight>>;
@@ -19,12 +23,18 @@ export interface ScoringParameters {
   bands: { immediate: number; high: number; investigate: number };
   /** FR-SC4: an event signal must be at least this fresh, or band = ignore. */
   eventSignalFreshnessDays: number;
+  /** Per-strength multiplier applied to a signal's decayed contribution. */
+  evidenceMultipliers: Record<EvidenceStrength, number>;
+  /** Highest band each strength permits (§2.5.3). */
+  evidenceCeilings: Record<EvidenceStrength, LeadBand>;
 }
 
 export interface ScorableSignal {
   id: string;
   type: SignalType;
   eventDate: Date;
+  /** Resolved when the signal was observed; defaults to the weakest. */
+  evidenceStrength?: EvidenceStrength;
 }
 
 export interface SignalContribution {
@@ -34,7 +44,9 @@ export interface SignalContribution {
   ageDays: number;
   baseWeight: number;
   halfLifeDays: number;
-  /** Base weight with decay already applied (FR-B16). */
+  evidenceStrength: EvidenceStrength;
+  evidenceMultiplier: number;
+  /** Base weight with decay AND the evidence multiplier applied (FR-B16). */
   contribution: number;
   /**
    * False for a signal beaten by a stronger one of the same type. Still
@@ -55,6 +67,13 @@ export interface ScoreResult {
 }
 
 export const MAX_SCORE = 100;
+
+const BAND_RANK: Record<LeadBand, number> = { ignore: 0, investigate: 1, high: 2, immediate: 3 };
+
+/** A band may be lowered by weak evidence, never raised by strong evidence. */
+function capBand(band: LeadBand, ceiling: LeadBand): LeadBand {
+  return BAND_RANK[band] <= BAND_RANK[ceiling] ? band : ceiling;
+}
 
 /**
  * Only the strongest surviving signal of each type counts toward intent.
@@ -82,6 +101,9 @@ export function score(
     const baseWeight = configured?.weight ?? 0;
     const halfLifeDays = configured?.halfLifeDays ?? 0;
     const days = ageInDays(signal.eventDate, now);
+    const strength = signal.evidenceStrength ?? 'E0';
+    const multiplier = params.evidenceMultipliers?.[strength] ?? 1;
+
     return {
       signalId: signal.id,
       type: signal.type,
@@ -89,7 +111,9 @@ export function score(
       ageDays: days,
       baseWeight,
       halfLifeDays,
-      contribution: decay(baseWeight, halfLifeDays, days),
+      evidenceStrength: strength,
+      evidenceMultiplier: multiplier,
+      contribution: decay(baseWeight, halfLifeDays, days) * multiplier,
       counted: false,
     };
   });
@@ -130,14 +154,39 @@ export function score(
     };
   }
 
+  // §2.5.3 made mechanical: contextual evidence can STRENGTHEN a real
+  // opportunity but can never create one. That is a statement about
+  // reachability, not about weight, so it is a ceiling rather than a
+  // multiplier — enough E0 signals must not sum their way into `high`.
+  const strongest = strongestEvidence(contributions);
+  const ceiling = params.evidenceCeilings?.[strongest] ?? 'immediate';
+  const fromScore = bandFor(totalScore, params.bands);
+  const band = capBand(fromScore, ceiling);
+
   return {
     fitScore: input.fitScore,
     intentScore,
     compoundBonus: input.compoundBonus,
     totalScore,
-    band: bandFor(totalScore, params.bands),
+    band,
     contributions,
+    ...(band === fromScore
+      ? {}
+      : {
+          bandReason:
+            `Capped at ${band}: strongest evidence is ${strongest} ` +
+            `(score alone would give ${fromScore})`,
+        }),
   };
+}
+
+const STRENGTH_RANK: Record<EvidenceStrength, number> = { E0: 0, E1: 1, E2: 2, E3: 3, E4: 4 };
+
+function strongestEvidence(contributions: SignalContribution[]): EvidenceStrength {
+  return contributions.reduce<EvidenceStrength>(
+    (best, c) => (STRENGTH_RANK[c.evidenceStrength] > STRENGTH_RANK[best] ? c.evidenceStrength : best),
+    'E0',
+  );
 }
 
 export function bandFor(total: number, bands: ScoringParameters['bands']): LeadBand {
