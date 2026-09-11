@@ -127,4 +127,11 @@ export class AppConfigService {
       .map((query) => query.trim())
       .filter((query) => query.length > 0);
   }
+
+  /** RSS feed URLs for the press-release source (P25, signal type S7). */
+  get pressReleaseFeeds(): string[] {
+    return this.env.PRESS_RELEASE_FEEDS.split(',')
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0);
+  }
 }

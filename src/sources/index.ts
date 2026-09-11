@@ -34,4 +34,8 @@ export type {
   ProcurementProvider,
   ProcurementNotice,
 } from './procurement/procurement-provider.interface.js';
+export { PressReleaseSource } from './press-release/press-release.source.js';
+export { parseRssItems, stripHtml } from './press-release/rss-parser.js';
+export { extractCompanyDomain } from './press-release/press-release-domain.js';
+export type { RssItem } from './press-release/rss-parser.js';
 

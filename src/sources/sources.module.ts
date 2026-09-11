@@ -14,6 +14,7 @@ import { HackerNewsSource } from './hackernews/hackernews.source.js';
 import { SourceHttpClient } from './http/source-http.client.js';
 import { IngestJobHandler } from './ingest-job.handler.js';
 import { IngestionService } from './ingestion.service.js';
+import { PressReleaseSource } from './press-release/press-release.source.js';
 import { ProductHuntSource } from './product-hunt/product-hunt.source.js';
 import { PROCUREMENT_PROVIDER } from './procurement/procurement-provider.interface.js';
 import {
@@ -78,6 +79,7 @@ import { WatermarkService } from './watermark.service.js';
     HackerNewsSource,
     ProductHuntSource,
     ProcurementSource,
+    PressReleaseSource,
     {
       provide: SIGNAL_SOURCE,
       inject: [
@@ -86,6 +88,7 @@ import { WatermarkService } from './watermark.service.js';
         HackerNewsSource,
         ProductHuntSource,
         ProcurementSource,
+        PressReleaseSource,
       ],
       useFactory: (...sources: SignalSource[]) => sources,
     },
@@ -103,6 +106,7 @@ export class SourcesModule implements OnModuleInit {
     private readonly hackerNews: HackerNewsSource,
     private readonly productHunt: ProductHuntSource,
     private readonly procurement: ProcurementSource,
+    private readonly pressRelease: PressReleaseSource,
   ) {}
 
   onModuleInit(): void {
@@ -112,6 +116,7 @@ export class SourcesModule implements OnModuleInit {
       this.hackerNews,
       this.productHunt,
       this.procurement,
+      this.pressRelease,
     ];
     for (const source of sources) {
       this.registry.register(

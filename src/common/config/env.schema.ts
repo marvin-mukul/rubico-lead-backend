@@ -108,6 +108,16 @@ export const envSchema = z.object({
     .min(1)
     .default('legacy system,legacy codebase,technical debt,migrating off,rewrite our'),
 
+  // P25: press-release RSS feeds (signal type S7), comma-separated. Verified
+  // live 2026-09-11 — the PRNewswire technology/software category feed
+  // returns real releases with no key. BusinessWire needs a real registered
+  // channel-id feed URL (its RSS is per-topic, not a bare public endpoint);
+  // add one here once available, same "config, not code" shape as HN.
+  PRESS_RELEASE_FEEDS: z
+    .string()
+    .min(1)
+    .default('https://www.prnewswire.com/rss/technology/computer-software-list.rss'),
+
   // FR-B21: SEC fair-access requires a User-Agent identifying us with a
   // contact address. Without it SEC will block the crawler.
   SEC_USER_AGENT: z
