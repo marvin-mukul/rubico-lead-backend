@@ -21,3 +21,17 @@ export type { AtsProvider, AtsPosting } from './ats/ats-provider.interface.js';
 export { HackerNewsSource } from './hackernews/hackernews.source.js';
 export { ProductHuntSource } from './product-hunt/product-hunt.source.js';
 export { FirstPartyController, firstPartyBodySchema } from './first-party/first-party.controller.js';
+export { ProcurementSource } from './procurement/procurement.source.js';
+export {
+  UkContractsFinderProvider,
+  TedProvider,
+  SamGovProvider,
+  pickLanguage,
+} from './procurement/procurement.providers.js';
+export { assessRelevance } from './procurement/procurement-relevance.js';
+export { PROCUREMENT_PROVIDER } from './procurement/procurement-provider.interface.js';
+export type {
+  ProcurementProvider,
+  ProcurementNotice,
+} from './procurement/procurement-provider.interface.js';
+
