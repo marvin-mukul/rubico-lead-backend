@@ -7,6 +7,7 @@ import {
   CompaniesController,
   ContactsController,
   LeadsController,
+  MetaController,
   ScoringConfigController,
 } from './api.controller.js';
 import { LeadsService } from './leads.service.js';
@@ -17,6 +18,7 @@ import { LeadsService } from './leads.service.js';
   controllers: [
     AuthController,
     LeadsController,
+    MetaController,
     CompaniesController,
     ContactsController,
     ScoringConfigController,

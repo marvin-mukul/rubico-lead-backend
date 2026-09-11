@@ -22,6 +22,15 @@ import {
   type SessionClaims,
 } from '../common/auth/index.js';
 import { AppConfigService } from '../common/config/app-config.service.js';
+import {
+  DECISION_REASON_CODES,
+  DECISION_VALUES,
+  EVENT_SIGNAL_TYPES,
+  LEAD_BANDS,
+  LEAD_STATUSES,
+  SIGNAL_TYPES,
+  SUPPRESSION_REASONS,
+} from '../common/domain/index.js';
 import { ContactResolutionGuard } from '../common/metering/index.js';
 import { PrismaService } from '../common/prisma/index.js';
 import { ZodValidationPipe } from '../common/validation/index.js';
@@ -41,6 +50,7 @@ import {
   loginBodySchema,
   loginResponseSchema,
   meResponseSchema,
+  metaResponseSchema,
   scoringConfigPatchSchema,
   scoringConfigResponseSchema,
   type ContactListQuery,
@@ -128,6 +138,31 @@ export class AuthController {
       email: session.sub,
       issuedAt: new Date(session.iat * 1000).toISOString(),
       expiresAt: new Date(session.exp * 1000).toISOString(),
+    };
+  }
+}
+
+/**
+ * The closed vocabularies the UI renders from (frontend FR-W30).
+ *
+ * Served straight from the domain constants, so this cannot drift from what
+ * the validators accept: there is no second list to keep in step.
+ */
+@ApiTags('meta')
+@Controller('api/meta')
+@SessionAuth()
+export class MetaController {
+  @Get()
+  @ApiZodOk('MetaResponse', metaResponseSchema)
+  get() {
+    return {
+      bands: [...LEAD_BANDS],
+      leadStatuses: [...LEAD_STATUSES],
+      decisionValues: [...DECISION_VALUES],
+      reasonCodes: [...DECISION_REASON_CODES],
+      signalTypes: [...SIGNAL_TYPES],
+      eventSignalTypes: [...EVENT_SIGNAL_TYPES],
+      suppressionReasons: [...SUPPRESSION_REASONS],
     };
   }
 }
