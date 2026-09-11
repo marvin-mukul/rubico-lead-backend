@@ -1809,6 +1809,18 @@
               ]
             }
           },
+          "priorityBands": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "immediate",
+                "high",
+                "investigate",
+                "ignore"
+              ]
+            }
+          },
           "leadStatuses": {
             "type": "array",
             "items": {
@@ -1930,6 +1942,7 @@
         },
         "required": [
           "bands",
+          "priorityBands",
           "leadStatuses",
           "decisionValues",
           "reasonCodes",

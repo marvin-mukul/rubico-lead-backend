@@ -8,6 +8,7 @@ import {
   EVENT_SIGNAL_TYPES,
   LEAD_BANDS,
   LEAD_SORTS,
+  PRIORITY_BANDS,
   LEAD_STATUSES,
   SIGNAL_TYPES,
   SUPPRESSION_REASONS,
@@ -66,6 +67,16 @@ export const meResponseSchema = z.object({
  */
 export const metaResponseSchema = z.object({
   bands: z.array(z.enum(LEAD_BANDS)),
+  /**
+   * The bands worth a human's attention right now (FR-C3's spend exemption,
+   * and the two the Slack digest lists in full).
+   *
+   * Published so the queue screen does not keep its own copy. A band added
+   * above `immediate` must appear in the digest and on the queue without
+   * anyone remembering to edit a list in the frontend — which is precisely
+   * what frontend FR-W30 is for.
+   */
+  priorityBands: z.array(z.enum(LEAD_BANDS)),
   leadStatuses: z.array(z.enum(LEAD_STATUSES)),
   decisionValues: z.array(z.enum(DECISION_VALUES)),
   reasonCodes: z.array(z.enum(DECISION_REASON_CODES)),
