@@ -282,6 +282,16 @@ export const scoringConfigResponseSchema = z.object({
       updatedBy: z.string().nullable(),
     }),
   ),
+  /**
+   * Frontend FR-W19: the settings screen must warn that a change takes effect
+   * at the next nightly rescore, and show when the last one ran.
+   *
+   * Without this the warning is unfalsifiable — "changes apply at the next
+   * rescore" means nothing to someone who cannot tell whether the rescore has
+   * run since 2026-08. `null` when no rescore has ever completed, which is
+   * itself the answer to "why has nothing changed".
+   */
+  lastRescoreAt: z.iso.datetime().nullable(),
 });
 
 export const scoringConfigPatchSchema = z.object({

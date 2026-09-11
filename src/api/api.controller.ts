@@ -262,7 +262,18 @@ export class ScoringConfigController {
     // Read the rows rather than the cache: `updatedAt` and `updatedBy` are
     // the audit trail for who last changed a weight, and the cache holds
     // only key -> value.
-    const rows = await this.prisma.scoringConfig.findMany({ orderBy: { key: 'asc' } });
+    const [rows, lastRescore] = await Promise.all([
+      this.prisma.scoringConfig.findMany({ orderBy: { key: 'asc' } }),
+      // FR-W19. Only a SUCCEEDED run counts: a failed or still-running
+      // rescore has not applied anything, and reporting it as the last one
+      // would tell the reviewer their change is live when it is not.
+      this.prisma.jobRun.findFirst({
+        where: { jobName: 'score.rescore-all', status: 'succeeded' },
+        orderBy: { finishedAt: 'desc' },
+        select: { finishedAt: true },
+      }),
+    ]);
+
     return {
       config: rows.map((row) => ({
         key: row.key,
@@ -270,6 +281,7 @@ export class ScoringConfigController {
         updatedAt: row.updatedAt.toISOString(),
         updatedBy: row.updatedBy,
       })),
+      lastRescoreAt: lastRescore?.finishedAt?.toISOString() ?? null,
     };
   }
 
