@@ -1,0 +1,62 @@
+{
+  "_comment": "Evidence strength (P20). TWO axes kept separate: strength (how directly does this assert a problem?) and attribution (are we sure it is this company?). The SEC failure was attributional, not a strength problem, and one axis cannot express that.",
+  "levels": {
+    "E0": "Context — what they run or who they are. NEVER an opportunity on its own.",
+    "E1": "Inferred initiative — someone is doing something that implies a project.",
+    "E2": "Stated initiative — the organisation says it is doing the thing.",
+    "E3": "Declared requirement — the organisation says it needs a supplier.",
+    "E4": "Direct inbound — they contacted us."
+  },
+  "defaultBySignalType": {
+    "F-LEG": "E0",
+    "F-PLAT": "E0",
+    "S1": "E0",
+    "S2": "E1",
+    "S3": "E1",
+    "S4": "E0",
+    "S5": "E4",
+    "S6": "E3"
+  },
+  "overrides": [
+    {
+      "strength": "E3",
+      "note": "Explicit buying intent, whatever the source said it was.",
+      "patterns": [
+        "\\brequest for (?:proposal|quotation|tender|information)\\b",
+        "\\brfp\\b",
+        "\\brfq\\b",
+        "\\brfi\\b",
+        "\\binvitation to tender\\b",
+        "\\bitt\\b",
+        "\\bseeking (?:an? )?(?:agency|partner|vendor|supplier)\\b",
+        "\\baccepting (?:bids|proposals)\\b",
+        "\\bprocurement of\\b"
+      ]
+    },
+    {
+      "strength": "E2",
+      "note": "A stated initiative — they have said publicly that they are doing it.",
+      "patterns": [
+        "\\bwe are (?:re-?platforming|migrating|rebuilding|modernis|moderniz|replacing)",
+        "\\bannounc(?:es|ed|ing)\\b.{0,60}\\b(?:platform|system|app|website|digital)\\b",
+        "\\bhas (?:selected|chosen|appointed)\\b",
+        "\\bgoes live\\b",
+        "\\bnow live\\b",
+        "\\bembarking on\\b",
+        "\\bkicks? off\\b.{0,40}\\bprogramme\\b"
+      ]
+    }
+  ],
+  "bandCeiling": {
+    "E0": "ignore",
+    "E1": "investigate",
+    "E2": "high",
+    "E3": "immediate",
+    "E4": "immediate"
+  },
+  "attributionLevels": {
+    "A_exact": "The domain came from the source itself (contact email, story URL, board slug).",
+    "A_matched": "Resolved from a company name.",
+    "A_weak": "Heuristic or inferred."
+  }
+}

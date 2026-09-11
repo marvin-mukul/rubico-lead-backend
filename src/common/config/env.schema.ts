@@ -84,6 +84,15 @@ export const envSchema = z.object({
   // FR-C9: the price table lives in config, not code. Rates move.
   PRICE_TABLE_PATH: z.string().min(1).default('./config/pricing.json'),
 
+  // §2.3: `scoring_config.value` is a Float, so list- and tree-shaped config
+  // (capability map, archetypes, trigger families, evidence rules) lives in
+  // JSON files following the PRICE_TABLE_PATH precedent. Numeric weights stay
+  // in scoring_config where a human can PATCH them (FR-SC3).
+  CAPABILITY_MAP_PATH: z.string().min(1).default('./config/capability-map.json'),
+  ARCHETYPE_PATH: z.string().min(1).default('./config/archetypes.json'),
+  TRIGGER_PATH: z.string().min(1).default('./config/triggers.json'),
+  EVIDENCE_PATH: z.string().min(1).default('./config/evidence.json'),
+
   // ── Sources ──────────────────────────────────────────────────────────────
   // SEC Form D carries no website for the filer, so `ingest.sec-edgar` needs
   // a name -> domain step to attach signals to a company at all. `none` (the
