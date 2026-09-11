@@ -16,8 +16,17 @@ import { OpportunityTriggerService } from '../opportunity/index.js';
 import { ScoringConfigService } from '../scoring-config/index.js';
 import { ScoringService } from '../scoring/index.js';
 
-/** How much of the backlog one run will take on. */
-const BATCH_LIMIT = 200;
+/**
+ * How much of the backlog one run will take on, when `pipeline.batchLimit`
+ * is not configured.
+ *
+ * The limit is only safe because `pending()` orders by `lastPipelineRunAt`
+ * ascending. Ordering by `firstSeenAt: desc` with a limit — which is what
+ * this did before — meant the newest 200 companies were re-read on every run
+ * and everything older was NEVER processed. With 523 eligible companies, 323
+ * of them were permanently invisible.
+ */
+const DEFAULT_BATCH_LIMIT = 200;
 /** Re-enrich a company at most this often. */
 const ENRICH_STALE_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -63,7 +72,9 @@ export class PipelineRunJob implements JobHandler {
         if (request) briefRequests.push(request);
       } catch (error) {
         // FR-C2: the budget is gone. Halting is the point — degrading
-        // quietly is what the cap exists to prevent.
+        // quietly is what the cap exists to prevent. Deliberately re-thrown
+        // BEFORE marking: nothing was examined, so the company keeps its
+        // place in the queue.
         if (error instanceof MeteringError) throw error;
 
         context.count('failed');
@@ -73,6 +84,10 @@ export class PipelineRunJob implements JobHandler {
           }`,
         );
       }
+
+      // After the attempt, whatever happened. A company that was filtered,
+      // discarded or errored still consumed a slot.
+      await this.markExamined(company.id, context);
     }
 
     await this.writeBriefs(briefRequests, context);
@@ -109,6 +124,7 @@ export class PipelineRunJob implements JobHandler {
   private async pending(): Promise<Company[]> {
     const freshnessDays = await this.scoringConfig.get('scoring.eventSignalFreshnessDays', 30);
     const freshSince = new Date(Date.now() - freshnessDays * 24 * 60 * 60 * 1000);
+    const batchLimit = await this.scoringConfig.get('pipeline.batchLimit', DEFAULT_BATCH_LIMIT);
 
     return this.prisma.company.findMany({
       where: {
@@ -120,8 +136,34 @@ export class PipelineRunJob implements JobHandler {
           },
         },
       },
-      orderBy: { firstSeenAt: 'desc' },
-      take: BATCH_LIMIT,
+      // Least-recently-examined first, never-examined before that. This is
+      // what makes the batch limit a throughput control rather than a
+      // permanent cut-off: every eligible company reaches the front of the
+      // queue eventually, and the whole set cycles in
+      // (eligible / batchLimit / runsPerDay) days.
+      orderBy: [{ lastPipelineRunAt: { sort: 'asc', nulls: 'first' } }, { firstSeenAt: 'desc' }],
+      take: batchLimit,
+    });
+  }
+
+  /**
+   * Records that the pipeline examined this company, whatever the outcome.
+   *
+   * It must be set for filtered, discarded and errored companies too. Marking
+   * only successes would leave those rows with a null timestamp, permanently
+   * at the front of the ordering, monopolising every batch — the starvation
+   * bug inverted rather than fixed.
+   *
+   * `updateMany`, not `update`: the company can be gone by the time we get
+   * here — deleted or merged between `pending()` and now — and `update`
+   * throws on a missing row. This is bookkeeping; it must never abort a run
+   * that has already done its real work.
+   */
+  private async markExamined(companyId: string, context: JobContext): Promise<void> {
+    if (context.dryRun) return;
+    await this.prisma.company.updateMany({
+      where: { id: companyId },
+      data: { lastPipelineRunAt: new Date() },
     });
   }
 

@@ -30,12 +30,19 @@ model Company {
   atsSlug           String?
   firstSeenAt       DateTime  @default(now())
   lastEnrichedAt    DateTime?
+  // When pipeline.run last EXAMINED this company — set whatever the outcome,
+  // including filtered, discarded and errored. `pending()` orders by it
+  // ascending (nulls first) so the pipeline round-robins the whole eligible
+  // set instead of re-reading the newest BATCH_LIMIT rows forever.
+  lastPipelineRunAt DateTime?
   suppressionReason String? // client | competitor | rejected | do-not-contact
   signals           Signal[]
   leads             Lead[]
   contacts          Contact[]
 
   @@index([suppressionReason])
+  // Supports pending()'s ordering scan.
+  @@index([lastPipelineRunAt])
 }
 
 model Signal {
