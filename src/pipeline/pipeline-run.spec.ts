@@ -70,6 +70,7 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
       classify as ClassifyService,
       scoring,
       briefs as BriefService,
+      new ScoringConfigService(prisma),
     );
 
   const keeps = {

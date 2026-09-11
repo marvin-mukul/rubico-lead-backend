@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EVENT_SIGNAL_TYPES } from '../common/domain/index.js';
 import { MeteringError } from '../common/metering/index.js';
 import { PrismaService } from '../common/prisma/index.js';
 import { FitFilterService, SuppressionService } from '../companies/index.js';
@@ -12,6 +13,7 @@ import {
   type BriefRequest,
   type ClassifiableSignal,
 } from '../llm/index.js';
+import { ScoringConfigService } from '../scoring-config/index.js';
 import { ScoringService } from '../scoring/index.js';
 
 /** How much of the backlog one run will take on. */
@@ -44,6 +46,7 @@ export class PipelineRunJob implements JobHandler {
     private readonly classify: ClassifyService,
     private readonly scoring: ScoringService,
     private readonly briefs: BriefService,
+    private readonly scoringConfig: ScoringConfigService,
   ) {}
 
   async run(context: JobContext): Promise<void> {
@@ -75,7 +78,19 @@ export class PipelineRunJob implements JobHandler {
   }
 
   /**
-   * Companies worth spending on: active, with signals, not already briefed.
+   * Companies worth spending on: active, **carrying fresh evidence**, and
+   * not already briefed.
+   *
+   * The freshness clause is the point. FR-SC4 already forces a company whose
+   * newest event signal is stale into band `ignore` — but scoring it
+   * correctly and paying for it are different things. Without this filter the
+   * pipeline still enriches and classifies those companies to produce a lead
+   * that can only ever be `ignore`. Measured on real data: 117 of 640
+   * companies, every run, forever.
+   *
+   * Uses the same `scoring.eventSignalFreshnessDays` knob as FR-SC4, so the
+   * thing we spend on and the thing that can be banded stay in step by
+   * construction rather than by two numbers that drift apart.
    *
    * ⚠ The obvious spelling of the last clause is a silent no-op. Prisma
    * strips `undefined` from filters, so `brief: { not: undefined }` collapses
@@ -88,10 +103,18 @@ export class PipelineRunJob implements JobHandler {
    * `null` literal (`JsonNull`); an absent brief is the former.
    */
   private async pending(): Promise<Company[]> {
+    const freshnessDays = await this.scoringConfig.get('scoring.eventSignalFreshnessDays', 30);
+    const freshSince = new Date(Date.now() - freshnessDays * 24 * 60 * 60 * 1000);
+
     return this.prisma.company.findMany({
       where: {
         ...SuppressionService.activeFilter(),
-        signals: { some: {} },
+        signals: {
+          some: {
+            type: { in: [...EVENT_SIGNAL_TYPES] },
+            eventDate: { gte: freshSince },
+          },
+        },
         leads: { none: { NOT: { brief: { equals: Prisma.DbNull } } } },
       },
       orderBy: { firstSeenAt: 'desc' },
