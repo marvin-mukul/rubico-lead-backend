@@ -14,7 +14,7 @@ export interface AtsPosting {
  * interface should know which one a company uses.
  */
 export interface AtsProvider {
-  readonly name: 'greenhouse' | 'lever' | 'ashby';
+  readonly name: 'greenhouse' | 'lever' | 'ashby' | 'workable' | 'smartrecruiters' | 'recruitee';
   /** Null when the board does not exist (a stale slug), rather than throwing. */
   listPostings(slug: string): Promise<AtsPosting[] | null>;
 }

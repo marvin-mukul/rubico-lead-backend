@@ -3,9 +3,17 @@ import { AppConfigService } from '../common/config/app-config.service.js';
 import { CompaniesModule } from '../companies/index.js';
 import { JobRegistry } from '../jobs/index.js';
 import { SignalsModule } from '../signals/index.js';
+import { AtsSlugDiscoveryEnricher } from './ats/ats-slug-discovery.enricher.js';
 import { AtsSource } from './ats/ats.source.js';
 import { ATS_PROVIDER } from './ats/ats-provider.interface.js';
-import { AshbyProvider, GreenhouseProvider, LeverProvider } from './ats/ats.providers.js';
+import {
+  AshbyProvider,
+  GreenhouseProvider,
+  LeverProvider,
+  RecruiteeProvider,
+  SmartRecruitersProvider,
+  WorkableProvider,
+} from './ats/ats.providers.js';
 import { ClearbitAutocompleteResolver } from './domain-resolver/clearbit-autocomplete.resolver.js';
 import { DOMAIN_RESOLVER } from './domain-resolver/domain-resolver.interface.js';
 import { NullDomainResolver } from './domain-resolver/null-domain.resolver.js';
@@ -59,11 +67,22 @@ import { WatermarkService } from './watermark.service.js';
     GreenhouseProvider,
     LeverProvider,
     AshbyProvider,
+    WorkableProvider,
+    SmartRecruitersProvider,
+    RecruiteeProvider,
     {
       provide: ATS_PROVIDER,
-      inject: [GreenhouseProvider, LeverProvider, AshbyProvider],
+      inject: [
+        GreenhouseProvider,
+        LeverProvider,
+        AshbyProvider,
+        WorkableProvider,
+        SmartRecruitersProvider,
+        RecruiteeProvider,
+      ],
       useFactory: (...providers: unknown[]) => providers,
     },
+    AtsSlugDiscoveryEnricher,
 
     UkContractsFinderProvider,
     TedProvider,
@@ -93,7 +112,7 @@ import { WatermarkService } from './watermark.service.js';
       useFactory: (...sources: SignalSource[]) => sources,
     },
   ],
-  exports: [IngestionService, SIGNAL_SOURCE, SourceHttpClient],
+  exports: [IngestionService, SIGNAL_SOURCE, SourceHttpClient, AtsSlugDiscoveryEnricher],
 })
 export class SourcesModule implements OnModuleInit {
   constructor(
