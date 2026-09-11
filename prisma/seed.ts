@@ -46,6 +46,15 @@ const SCORING_DEFAULTS: Record<string, number> = {
   'S6.weight': 35,
   'S6.halfLifeDays': 45,
 
+  // S7 — press release (P25). A STATED initiative (E2 by default in
+  // evidence.json): the organisation has said publicly it is doing the
+  // thing, which is stronger than an inferred hiring signal but weaker than
+  // a declared procurement requirement. Half-life sits between S2 (hiring,
+  // slow-moving) and S6 (a tender with a closing date) — a press release
+  // stays relevant for a couple of months, not a year.
+  'S7.weight': 20,
+  'S7.halfLifeDays': 60,
+
   // F-LEG — legacy stack flag. A standing property, not an event, so it
   // decays slowly and is re-verified weekly by maintenance.reverify-legacy.
   'F-LEG.weight': 15,

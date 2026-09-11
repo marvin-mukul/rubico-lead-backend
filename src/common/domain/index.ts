@@ -28,11 +28,13 @@ export const SIGNAL_TYPES = [
   'S5',
   /** S6 — public procurement notice. A DECLARED requirement, not inferred. */
   'S6',
+  /** S7 — press release. A STATED initiative (E2): the org says it is doing the thing. */
+  'S7',
 ] as const;
 export type SignalType = (typeof SIGNAL_TYPES)[number];
 
 /** Event signals only — `F-LEG` and `F-PLAT` are standing properties. */
-export const EVENT_SIGNAL_TYPES = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'] as const;
+export const EVENT_SIGNAL_TYPES = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7'] as const;
 export type EventSignalType = (typeof EVENT_SIGNAL_TYPES)[number];
 
 export const LEAD_BANDS = ['immediate', 'high', 'investigate', 'ignore'] as const;
