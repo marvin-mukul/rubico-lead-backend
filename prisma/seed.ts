@@ -75,7 +75,25 @@ const SCORING_DEFAULTS: Record<string, number> = {
   // PROVISIONAL: the real ICP lives in the parent spec. These express a
   // plausible shape — mid-market, English-speaking, software-adjacent — so the
   // filter is exercisable end to end.
-  'fit.minScore': 40,
+  //
+  // ⚠ P15: deliberately 0, which makes the fit filter a SCORER, not a GATE.
+  //
+  // Nothing populates firmographics (no Enricher returns `firmographics`), so
+  // industry/country/region/headcount always resolve to their `.default` of 0
+  // and the reachable maximum is 20 — against the previous threshold of 40.
+  // The filter therefore rejected 100% of companies and could not pass any,
+  // which is why the pipeline had never classified a single record.
+  //
+  // The fit score still contributes to totalScore via score.fitWeight; it just
+  // no longer gates. P19 installs the real gate (an opportunity trigger on
+  // signal evidence), which is the right question to gate on — "is there
+  // evidence of a technology problem?" rather than "is this the right kind of
+  // company?" (§2.5.4: industry is contextual, not a hard exclusion).
+  //
+  // Exposure while this stands is bounded and small: pipeline.run takes at
+  // most BATCH_LIMIT=200 companies per run, so 2 runs/day x 200 x $0.0002
+  // (warm classify) = ~$0.08/day, and MeteredClient still hard-caps the month.
+  'fit.minScore': 0,
 
   'fit.headcount.default': 0,
   'fit.headcount.1-10': 2,
