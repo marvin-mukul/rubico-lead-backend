@@ -15,6 +15,7 @@ import { MetricsModule } from './metrics/index.js';
 import { JobsModule } from './jobs/index.js';
 import { LlmModule } from './llm/index.js';
 import { NotificationsModule } from './notifications/index.js';
+import { OpportunityModule } from './opportunity/index.js';
 import { ScoringConfigModule } from './scoring-config/index.js';
 import { ScoringModule } from './scoring/index.js';
 import { SignalsModule } from './signals/index.js';
@@ -30,6 +31,7 @@ import { SourcesModule } from './sources/index.js';
     MeteringModule,
     JobsModule,
     ScoringConfigModule,
+    OpportunityModule,
     CompaniesModule,
     SignalsModule,
     SourcesModule,

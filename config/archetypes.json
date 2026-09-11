@@ -1,0 +1,32 @@
+{
+  "archetypes": [
+    {
+      "key": "idea_to_product",
+      "label": "Idea to product",
+      "description": "Starting with an idea and needing it built into a product."
+    },
+    {
+      "key": "ai_code_to_production",
+      "label": "AI-generated code to production",
+      "description": "Built it in Lovable, Replit, Bolt or Claude and needs it secured, finished and shipped. Rubico's hero offer.",
+      "subTypes": [
+        "production_readiness",
+        "data_security",
+        "user_access_management",
+        "scaling_performance",
+        "integrations_dependencies",
+        "hidden_technical_blockers"
+      ]
+    },
+    {
+      "key": "fix_slowing_software",
+      "label": "Fix software that is already running",
+      "description": "An existing system that is slowing down, breaking, or costing too much to change."
+    },
+    {
+      "key": "complex_engineering",
+      "label": "Complex engineering",
+      "description": "A hard engineering problem, or a need for capacity and expertise the team does not have."
+    }
+  ]
+}

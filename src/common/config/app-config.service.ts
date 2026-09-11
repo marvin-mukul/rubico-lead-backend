@@ -100,6 +100,16 @@ export class AppConfigService {
     return overrides[provider] ?? this.env.MONTHLY_CAP_USD;
   }
 
+  /** Paths to the JSON structure config files (§2.3). */
+  get opportunityConfigPaths() {
+    return {
+      capabilityMap: this.env.CAPABILITY_MAP_PATH,
+      archetypes: this.env.ARCHETYPE_PATH,
+      triggers: this.env.TRIGGER_PATH,
+      evidence: this.env.EVIDENCE_PATH,
+    } as const;
+  }
+
   // ── Sources ──────────────────────────────────────────────────────────────
   /** FR-B21: mandatory on every SEC request. */
   get secUserAgent(): string {

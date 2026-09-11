@@ -1,0 +1,223 @@
+{
+  "_comment": "Trigger families for the zero-cost gate (P19). Tuned for RECALL: a false negative silently drops a real opportunity and is unrecoverable; a false positive costs one classify call (~$0.0002). Patterns are case-insensitive JavaScript regex sources.",
+  "families": [
+    {
+      "key": "ai-prototype",
+      "label": "AI-generated code needing production hardening",
+      "archetypes": [
+        "ai_code_to_production"
+      ],
+      "patterns": [
+        "\\bvibe[- ]?cod",
+        "built (?:it )?(?:with|in|using) (?:lovable|replit|bolt|cursor|v0|claude|chatgpt|copilot)",
+        "\\bai[- ]generated code\\b",
+        "\\bai[- ]built\\b",
+        "\\bllm[- ]generated\\b",
+        "\\bprototype to production\\b",
+        "\\bproduction[- ]read(?:y|iness)\\b",
+        "\\bmvp\\b.{0,40}\\b(?:scale|production|secure|harden)",
+        "\\bno[- ]code\\b",
+        "\\blow[- ]code\\b"
+      ]
+    },
+    {
+      "key": "web-build",
+      "label": "Website or web application",
+      "archetypes": [
+        "idea_to_product",
+        "fix_slowing_software"
+      ],
+      "patterns": [
+        "\\bweb ?site\\b",
+        "\\bwebsite\\b",
+        "\\bweb app(?:lication)?\\b",
+        "\\bweb development\\b",
+        "\\bweb portal\\b",
+        "\\bcustomer portal\\b",
+        "\\bself[- ]?service portal\\b",
+        "\\bintranet\\b",
+        "\\bextranet\\b",
+        "\\bcms\\b",
+        "\\bcontent management\\b",
+        "\\bmicrosite\\b",
+        "\\bwordpress\\b",
+        "\\bdrupal\\b",
+        "\\bumbraco\\b",
+        "\\bsitecore\\b"
+      ]
+    },
+    {
+      "key": "ecommerce",
+      "label": "Ecommerce and online transactions",
+      "archetypes": [
+        "fix_slowing_software",
+        "idea_to_product"
+      ],
+      "patterns": [
+        "\\be-?commerce\\b",
+        "\\bonline (?:shop|store|ordering|booking|payment)s?\\b",
+        "\\bcheckout\\b",
+        "\\bshopping cart\\b",
+        "\\bwoo ?commerce\\b",
+        "\\bshopify\\b",
+        "\\bmagento\\b",
+        "\\badobe commerce\\b",
+        "\\bpayment (?:gateway|system|platform)\\b",
+        "\\bepos\\b",
+        "\\bpoint of sale\\b"
+      ]
+    },
+    {
+      "key": "mobile-app",
+      "label": "Mobile application",
+      "archetypes": [
+        "idea_to_product",
+        "complex_engineering"
+      ],
+      "patterns": [
+        "\\bmobile app(?:lication)?\\b",
+        "\\bios app\\b",
+        "\\bandroid app\\b",
+        "\\breact native\\b",
+        "\\bflutter\\b",
+        "\\bapp development\\b",
+        "\\bsmartphone app\\b",
+        "\\btablet app\\b"
+      ]
+    },
+    {
+      "key": "modernisation",
+      "label": "Legacy modernisation and replatforming",
+      "archetypes": [
+        "fix_slowing_software"
+      ],
+      "patterns": [
+        "\\blegacy\\b",
+        "\\bmodernis|\\bmoderniz",
+        "\\bre-?platform",
+        "\\bmigrat(?:e|ing|ion)\\b",
+        "\\brewrite\\b",
+        "\\btechnical debt\\b",
+        "\\bend[- ]of[- ](?:life|support)\\b",
+        "\\beol\\b",
+        "\\bupgrade (?:our|the|existing)\\b",
+        "\\bdigital transformation\\b",
+        "\\bdigitali[sz]ation\\b",
+        "\\bdigitisation\\b",
+        "\\bmainframe\\b"
+      ]
+    },
+    {
+      "key": "custom-software",
+      "label": "Bespoke business systems",
+      "archetypes": [
+        "idea_to_product",
+        "complex_engineering"
+      ],
+      "patterns": [
+        "\\bbespoke\\b",
+        "\\bcustom software\\b",
+        "\\bcustom (?:system|application|build)\\b",
+        "\\bcrm\\b",
+        "\\berp\\b",
+        "\\bmis\\b",
+        "\\blms\\b",
+        "\\bmanagement information system\\b",
+        "\\bcase management\\b",
+        "\\bbooking system\\b",
+        "\\bscheduling system\\b",
+        "\\bworkflow (?:system|automation)\\b",
+        "\\bsoftware (?:development|solution|system|package|licen[cs]e)\\b"
+      ]
+    },
+    {
+      "key": "integration-data",
+      "label": "Integration and data engineering",
+      "archetypes": [
+        "complex_engineering"
+      ],
+      "patterns": [
+        "\\bintegration\\b",
+        "\\bapi\\b",
+        "\\bmiddleware\\b",
+        "\\betl\\b",
+        "\\bdata (?:migration|warehouse|platform|pipeline|integration)\\b",
+        "\\binteroperab",
+        "\\bsingle sign[- ]on\\b",
+        "\\bsso\\b",
+        "\\bdatabase\\b"
+      ]
+    },
+    {
+      "key": "performance-scale",
+      "label": "Performance, scaling and reliability",
+      "archetypes": [
+        "fix_slowing_software",
+        "complex_engineering"
+      ],
+      "patterns": [
+        "\\bperformance (?:issue|problem|improvement|optimis|optimiz)",
+        "\\bslow(?:ing|ness)?\\b",
+        "\\bscal(?:e|ing|ability)\\b",
+        "\\bdowntime\\b",
+        "\\boutage\\b",
+        "\\bload (?:testing|balanc)",
+        "\\bhigh availability\\b",
+        "\\bresilienc"
+      ]
+    },
+    {
+      "key": "cloud-devops",
+      "label": "Cloud, DevOps and delivery",
+      "archetypes": [
+        "complex_engineering"
+      ],
+      "patterns": [
+        "\\bcloud (?:migration|hosting|services|native)\\b",
+        "\\bdevops\\b",
+        "\\bci ?/ ?cd\\b",
+        "\\bcontinuous (?:integration|delivery|deployment)\\b",
+        "\\bkubernetes\\b",
+        "\\bdocker\\b",
+        "\\bterraform\\b",
+        "\\binfrastructure as code\\b",
+        "\\bit infrastructure\\b",
+        "\\bmanaged it\\b"
+      ]
+    },
+    {
+      "key": "quality-testing",
+      "label": "QA and test automation",
+      "archetypes": [
+        "complex_engineering"
+      ],
+      "patterns": [
+        "\\bqa\\b",
+        "\\bquality assurance\\b",
+        "\\btest automation\\b",
+        "\\bautomated testing\\b",
+        "\\bselenium\\b",
+        "\\bcypress\\b",
+        "\\bpenetration test",
+        "\\bsecurity (?:audit|assessment|testing)\\b"
+      ]
+    },
+    {
+      "key": "capacity-expertise",
+      "label": "Capacity and expertise",
+      "archetypes": [
+        "complex_engineering"
+      ],
+      "patterns": [
+        "\\bdevelopment partner\\b",
+        "\\bsoftware (?:agency|house|supplier|vendor|partner)\\b",
+        "\\boutsourc",
+        "\\bstaff augmentation\\b",
+        "\\bcontract developer",
+        "\\bseeking (?:an? )?(?:agency|partner|vendor|supplier|developer)",
+        "\\bframework agreement\\b.{0,40}\\b(?:software|digital|it)\\b",
+        "\\bhiring\\b.{0,30}\\b(?:developer|engineer|cto|head of (?:it|engineering|digital|technology))\\b"
+      ]
+    }
+  ]
+}

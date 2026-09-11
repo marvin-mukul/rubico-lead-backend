@@ -1,0 +1,24 @@
+{
+  "families": {
+    "frontend": ["Angular", "React", "Vue.js", "Next.js", "HTMX", "Bootstrap", "CSS", "HTML", "Foundation", "Materialize"],
+    "backend": ["Node.js", "Express.js", "Nest.js", "Django", "Python", "Laravel", "PHP"],
+    "ecommerce": ["WordPress", "WooCommerce", "Shopify", "Magento Commerce"],
+    "databases": ["MongoDB", "MySQL", "PostgreSQL", "Firebase"],
+    "mobile": ["React Native", "Android", "iOS", "Swift", "Kotlin", "Flutter", "Ionic", "Xcode"],
+    "cloud": ["AWS", "GCP", "Azure", "DigitalOcean", "Heroku"],
+    "devops": ["Docker", "Terraform", "Ansible", "Jenkins", "GitHub Actions", "Git", "Prometheus", "Grafana", "Datadog", "New Relic", "Site24x7", "CloudFormation"],
+    "testing": ["Postman", "Swagger", "Selenium", "Cypress", "JMeter", "BlazeMeter"],
+    "ai": ["AI Solutions", "LLM integration", "AI-generated code hardening"]
+  },
+  "serviceLines": [
+    "AI Solutions",
+    "Custom Software Development",
+    "Web App Development",
+    "Mobile App Development",
+    "Website Development",
+    "Go-To-Market / Digital Marketing",
+    "QA",
+    "UX/UI"
+  ],
+  "segments": ["Agencies", "Enterprises", "Nonprofits", "Startups"]
+}
