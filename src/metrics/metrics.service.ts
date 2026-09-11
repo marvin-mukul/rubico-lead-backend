@@ -79,16 +79,44 @@ export class MetricsService {
    * since (FR-B3).
    */
   private async decisionStats(range: FunnelRange) {
+    const window = { decidedAt: { gte: range.from, lte: range.to } };
+
+    const [overall, management, builder] = await Promise.all([
+      this.decisionTotals(window),
+      this.decisionTotals({ ...window, attribution: 'management' }),
+      this.decisionTotals({ ...window, attribution: 'builder' }),
+    ]);
+
+    return {
+      ...overall,
+      /**
+       * FR-W18 / addendum FR-L12: the split, kept separate from the total.
+       *
+       * M4 and M5 count only `management`. The Day-30 review is the builder
+       * sitting with a management reviewer and recording their verdicts, and
+       * a builder's own opinion of their own engine is not evidence. Rolling
+       * the two together produces a number that looks like validation and
+       * is not, which is worse than having no number.
+       *
+       * The overall figures stay alongside rather than being replaced —
+       * "how much reviewing happened" and "how much of it counts" are
+       * different questions and the Day-30 review asks both.
+       */
+      byAttribution: { management, builder },
+    };
+  }
+
+  private async decisionTotals(where: Prisma.DecisionWhereInput) {
     const [approved, rejected] = await Promise.all([
       this.prisma.decision.aggregate({
         _count: true,
         _avg: { scoreAtDecision: true },
-        where: { decision: 'approved', decidedAt: { gte: range.from, lte: range.to } },
+        where: { ...where, decision: 'approved' },
       }),
       this.prisma.decision.aggregate({
         _count: true,
         _avg: { scoreAtDecision: true },
-        where: { decision: 'rejected', decidedAt: { gte: range.from, lte: range.to } },
+        where: { ...where, decision: 'rejected' },
       }),
     ]);
 

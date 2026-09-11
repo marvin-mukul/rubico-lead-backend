@@ -170,6 +170,7 @@ export class LeadsService {
         user: decision.user,
         decision: decision.decision,
         reasonCode: decision.reasonCode,
+        attribution: decision.attribution,
         notes: decision.notes,
         scoreAtDecision: decision.scoreAtDecision,
         decidedAt: decision.decidedAt.toISOString(),
@@ -199,6 +200,7 @@ export class LeadsService {
           reasonCode: body.reasonCode,
           ...(body.notes === undefined ? {} : { notes: body.notes }),
           scoreAtDecision: lead.totalScore,
+          attribution: body.attribution,
         },
       }),
       this.prisma.lead.update({ where: { id: leadId }, data: { status: body.decision } }),
@@ -208,6 +210,7 @@ export class LeadsService {
       leadId,
       status: body.decision,
       scoreAtDecision: decision.scoreAtDecision,
+      attribution: decision.attribution,
       decidedAt: decision.decidedAt.toISOString(),
     };
   }

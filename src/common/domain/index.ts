@@ -53,6 +53,17 @@ export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export const DECISION_VALUES = ['approved', 'rejected'] as const;
 export type DecisionValue = (typeof DECISION_VALUES)[number];
 
+/**
+ * Whose judgement a decision records (frontend FR-W18, addendum FR-L12).
+ *
+ * M4 and M5 count only `management`. The Day-30 review is the builder sitting
+ * with a management reviewer and recording their verdicts, and a builder's own
+ * opinion of their own engine is not evidence — keeping the two apart is what
+ * makes the metric mean anything.
+ */
+export const DECISION_ATTRIBUTIONS = ['management', 'builder'] as const;
+export type DecisionAttribution = (typeof DECISION_ATTRIBUTIONS)[number];
+
 /** Sort orders `GET /api/leads` offers (frontend §6.3). */
 export const LEAD_SORTS = ['score', 'recency'] as const;
 export type LeadSort = (typeof LEAD_SORTS)[number];
