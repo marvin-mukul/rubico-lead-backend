@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { testConfig } from '../../test/support/config.factory.js';
 import { PrismaService } from '../common/prisma/index.js';
+import { OpportunityConfigService } from '../opportunity/index.js';
 import { ScoringConfigService } from '../scoring-config/index.js';
 import { CompoundService } from '../signals/index.js';
 import { MutableJobContext } from '../jobs/index.js';
@@ -29,13 +30,18 @@ describe('score.rescore-all parity with score.ts [integration]', () => {
 
   const DAY = 86_400_000;
 
-  const makeCompany = async (fitScore: number, signals: Array<[string, number]>) => {
+  const makeCompany = async (
+    fitScore: number,
+    signals: Array<[string, number] | [string, number, string]>,
+  ) => {
     const company = await prisma.company.create({
       data: { canonicalDomain: `parity-${randomUUID()}.test`, name: 'Parity Fixture' },
     });
     companyIds.push(company.id);
 
-    for (const [type, daysAgo] of signals) {
+    for (const entry of signals) {
+      const [type, daysAgo] = entry;
+      const strength = entry[2] ?? 'E1';
       await prisma.signal.create({
         data: {
           companyId: company.id,
@@ -45,6 +51,7 @@ describe('score.rescore-all parity with score.ts [integration]', () => {
           sourceName: 'fixture',
           raw: {},
           dedupeHash: randomUUID(),
+          evidenceStrength: strength,
         },
       });
     }
@@ -66,7 +73,12 @@ describe('score.rescore-all parity with score.ts [integration]', () => {
     prisma = new PrismaService(testConfig());
     await prisma.onModuleInit();
     const config = new ScoringConfigService(prisma);
-    scoring = new ScoringService(prisma, config, new CompoundService(prisma, config));
+    scoring = new ScoringService(
+      prisma,
+      config,
+      new CompoundService(prisma, config),
+      new OpportunityConfigService(testConfig()),
+    );
   });
 
   afterAll(async () => {
@@ -96,6 +108,17 @@ describe('score.rescore-all parity with score.ts [integration]', () => {
       makeCompany(40, [['S1', 29]]),
       // Signal just outside it.
       makeCompany(40, [['S1', 31]]),
+      // ── evidence ceiling cases (P20) ──────────────────────────────────
+      // Strong fit, strong score, but only E0 context: must cap at `ignore`.
+      makeCompany(100, [['S1', 1, 'E0'], ['S2', 2, 'E0']]),
+      // E1 inferred initiative: cannot exceed `investigate`.
+      makeCompany(100, [['S1', 1, 'E1'], ['S2', 2, 'E1']]),
+      // E2 stated initiative: cannot exceed `high`.
+      makeCompany(100, [['S1', 1, 'E2']]),
+      // E3 declared requirement: uncapped.
+      makeCompany(100, [['S6', 1, 'E3']]),
+      // Mixed — the STRONGEST evidence sets the ceiling.
+      makeCompany(100, [['S1', 1, 'E0'], ['S6', 3, 'E3']]),
     ]);
 
     // Expected values from the pure TypeScript scorer.

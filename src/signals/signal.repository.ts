@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { SignalType } from '../common/domain/index.js';
 import { PrismaService } from '../common/prisma/index.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { EvidenceService } from '../opportunity/evidence.service.js';
 import { dedupeHash } from './dedupe-hash.js';
 
 export interface SignalInsert {
@@ -40,7 +41,10 @@ function isUniqueViolation(error: unknown): boolean {
 export class SignalRepository {
   private readonly logger = new Logger(SignalRepository.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly evidence: EvidenceService,
+  ) {}
 
   /**
    * FR-B9: ingestion is per-record transactional, not per-batch. A single
@@ -66,6 +70,13 @@ export class SignalRepository {
           ...(input.excerpt === undefined ? {} : { excerpt: input.excerpt }),
           raw: input.raw,
           dedupeHash: hash,
+          // Resolved once, when the evidence is observed. Recomputing later
+          // against edited patterns would silently rewrite history.
+          evidenceStrength: this.evidence.strengthOf({
+            type: input.type,
+            excerpt: input.excerpt ?? null,
+            subject: input.subject,
+          }),
         },
         select: { id: true },
       });

@@ -5,6 +5,7 @@ import { CompanyRepository, SuppressionService } from '../companies/index.js';
 import { MutableJobContext } from '../jobs/index.js';
 import { SignalRepository, type RawSignal } from '../signals/index.js';
 import { IngestionService } from './ingestion.service.js';
+import { EvidenceService, OpportunityConfigService } from '../opportunity/index.js';
 
 describe('IngestionService [integration]', () => {
   let prisma: PrismaService;
@@ -37,7 +38,7 @@ describe('IngestionService [integration]', () => {
     await prisma.onModuleInit();
     ingestion = new IngestionService(
       new CompanyRepository(prisma),
-      new SignalRepository(prisma),
+      new SignalRepository(prisma, new EvidenceService(new OpportunityConfigService(testConfig()))),
       prisma,
     );
     suppression = new SuppressionService(prisma);

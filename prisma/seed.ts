@@ -66,6 +66,17 @@ const SCORING_DEFAULTS: Record<string, number> = {
   'compound.windowDays': 90,
   'compound.minDistinctTypes': 2,
 
+  // ── Evidence strength multipliers (P20) ─────────────────────────────────
+  // Numeric, so they live here where a human can PATCH them (FR-SC3); the
+  // E->band ceiling mapping is structural and lives in config/evidence.json.
+  // These only RANK within a band — the ceiling is what stops weak evidence
+  // creating an opportunity.
+  'evidence.E0.multiplier': 0.25,
+  'evidence.E1.multiplier': 1,
+  'evidence.E2.multiplier': 1.5,
+  'evidence.E3.multiplier': 2,
+  'evidence.E4.multiplier': 2,
+
   // ── Score composition ────────────────────────────────────────────────────
   // total = fit * fitWeight + intent * intentWeight + compoundBonus, clamped
   // to 0..100. Fit is 0..100 on its own, so it is halved to leave room for

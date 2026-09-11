@@ -49,6 +49,14 @@ model Signal {
   excerpt        String?
   raw            Json
   confirmedByLlm Boolean  @default(false)
+  // Evidence strength E0..E4, resolved when the signal is observed.
+  //
+  // Persisted rather than derived because `score.rescore-all` is a single
+  // set-based UPDATE (FR-B11) and cannot run 139 JavaScript regexes. It is
+  // also correct on its own terms: strength is a property of the evidence AS
+  // OBSERVED, and recomputing it later against edited patterns would
+  // silently rewrite history.
+  evidenceStrength String? @default("E0")
   // The uniqueness of this column IS the dedupe mechanism (acceptance A2).
   dedupeHash     String   @unique
   company        Company  @relation(fields: [companyId], references: [id])

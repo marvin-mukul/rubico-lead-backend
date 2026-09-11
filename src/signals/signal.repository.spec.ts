@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { testConfig } from '../../test/support/config.factory.js';
 import { PrismaService } from '../common/prisma/index.js';
 import { SignalRepository, type SignalInsert } from './signal.repository.js';
+import { EvidenceService, OpportunityConfigService } from '../opportunity/index.js';
 
 /**
  * Acceptance A2: "Re-running any ingestion job three times creates zero
@@ -36,7 +37,7 @@ describe('SignalRepository [integration]', () => {
   beforeAll(async () => {
     prisma = new PrismaService(testConfig());
     await prisma.onModuleInit();
-    signals = new SignalRepository(prisma);
+    signals = new SignalRepository(prisma, new EvidenceService(new OpportunityConfigService(testConfig())));
   });
 
   afterAll(async () => {

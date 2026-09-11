@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { OpportunityConfigService } from './opportunity-config.service.js';
+import { EvidenceService } from './evidence.service.js';
 import { OpportunityTriggerService } from './trigger.service.js';
 
 /**
@@ -9,7 +10,7 @@ import { OpportunityTriggerService } from './trigger.service.js';
  */
 @Global()
 @Module({
-  providers: [OpportunityConfigService, OpportunityTriggerService],
-  exports: [OpportunityConfigService, OpportunityTriggerService],
+  providers: [OpportunityConfigService, OpportunityTriggerService, EvidenceService],
+  exports: [OpportunityConfigService, OpportunityTriggerService, EvidenceService],
 })
 export class OpportunityModule {}

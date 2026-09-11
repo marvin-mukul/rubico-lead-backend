@@ -1,6 +1,8 @@
 export { OpportunityModule } from './opportunity.module.js';
 export { OpportunityConfigService } from './opportunity-config.service.js';
 export { OpportunityTriggerService } from './trigger.service.js';
+export { EvidenceService } from './evidence.service.js';
+export type { EvidenceInput } from './evidence.service.js';
 export {
   ARCHETYPE_KEYS,
   EVIDENCE_LEVELS,

@@ -10,6 +10,7 @@ import { CompoundService } from '../signals/index.js';
 import { LeadsService } from './leads.service.js';
 import { openApiSchema } from './openapi.js';
 import { leadListQuerySchema, leadDetailResponseSchema } from './dto.js';
+import { OpportunityConfigService } from '../opportunity/index.js';
 
 describe('/api/* surface (§8.3) [integration]', () => {
   let prisma: PrismaService;
@@ -53,7 +54,12 @@ describe('/api/* surface (§8.3) [integration]', () => {
     prisma = new PrismaService(testConfig());
     await prisma.onModuleInit();
     const config = new ScoringConfigService(prisma);
-    leads = new LeadsService(prisma, new ScoringService(prisma, config, new CompoundService(prisma, config)));
+    leads = new LeadsService(prisma, new ScoringService(
+      prisma,
+      config,
+      new CompoundService(prisma, config),
+      new OpportunityConfigService(testConfig()),
+    ));
     policy = new ContactResolutionPolicy(prisma);
     contacts = new ContactsService(prisma, policy);
   });
