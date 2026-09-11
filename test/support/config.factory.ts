@@ -33,6 +33,10 @@ export function testConfig(overrides: Partial<Env> = {}): AppConfigService {
     MONTHLY_CAP_USD: 25,
     DAILY_CAP_USD: 1.5,
     PER_LEAD_BUDGET_USD: 0.1,
+    // Kept in step with env.schema.ts's defaults by hand; the schema's own
+    // defaults are asserted directly where they are load-bearing.
+    PROCUREMENT_FEEDS: 'uk-contracts-finder,sam-gov',
+    HN_HIRING_THREADS: 3,
     PRICE_TABLE_PATH: './config/pricing.json',
     CAPABILITY_MAP_PATH: './config/capability-map.json',
     ARCHETYPE_PATH: './config/archetypes.json',

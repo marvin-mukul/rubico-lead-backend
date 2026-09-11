@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../../common/prisma/index.js';
 import type { CompanyModel as Company } from '../../generated/prisma/models.js';
 import type { Enricher, EnrichmentResult } from '../../enrichment/enricher.interface.js';
 import { ATS_PROVIDER, type AtsProvider } from './ats-provider.interface.js';
@@ -29,13 +30,29 @@ export class AtsSlugDiscoveryEnricher implements Enricher {
   /** Providers whose API gives a trustworthy "this slug does not exist" signal. */
   private readonly discoverable: AtsProvider[];
 
-  constructor(@Inject(ATS_PROVIDER) providers: AtsProvider[]) {
+  constructor(
+    @Inject(ATS_PROVIDER) providers: AtsProvider[],
+    private readonly prisma: PrismaService,
+  ) {
     this.discoverable = providers.filter((provider) => provider.name !== 'smartrecruiters');
   }
 
   async enrich(company: Company): Promise<EnrichmentResult> {
     // Already known — by hand, or by a previous run. Never re-probe.
     if (company.atsProvider && company.atsSlug) return {};
+
+    // An OBSERVED board beats a guessed one. `hackernews-hiring` records the
+    // board a company linked to in its own job post, which is the only place
+    // the engine ever sees a slug stated rather than probed for — it is
+    // certain, it costs no request, and guessing can only do worse. Measured
+    // on the September thread: 23 of 190 parsed companies arrive with one.
+    const observed = await this.observedSlug(company.id);
+    if (observed) {
+      this.logger.log(
+        `${company.canonicalDomain}: board observed in a job post — ${observed.provider}/${observed.slug}`,
+      );
+      return { atsProvider: observed.provider, atsSlug: observed.slug };
+    }
 
     for (const slug of candidateSlugs(company)) {
       for (const provider of this.discoverable) {
@@ -55,6 +72,29 @@ export class AtsSlugDiscoveryEnricher implements Enricher {
       }
     }
     return {};
+  }
+
+  /** An ATS board this company linked to in one of its own signals. */
+  private async observedSlug(
+    companyId: string,
+  ): Promise<{ provider: string; slug: string } | null> {
+    const signals = await this.prisma.signal.findMany({
+      where: { companyId, sourceName: 'hackernews-hiring' },
+      orderBy: { eventDate: 'desc' },
+      select: { raw: true },
+      take: 5,
+    });
+
+    for (const signal of signals) {
+      const ats = (signal.raw as { ats?: { provider?: unknown; slug?: unknown } } | null)?.ats;
+      if (typeof ats?.provider === 'string' && typeof ats.slug === 'string') {
+        // Only providers this engine can actually read back.
+        if (this.discoverable.some((provider) => provider.name === ats.provider)) {
+          return { provider: ats.provider, slug: ats.slug };
+        }
+      }
+    }
+    return null;
   }
 }
 

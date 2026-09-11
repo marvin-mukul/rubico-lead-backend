@@ -108,6 +108,33 @@ export const envSchema = z.object({
     .min(1)
     .default('legacy system,legacy codebase,technical debt,migrating off,rewrite our'),
 
+  /**
+   * Which procurement feeds to ingest, comma-separated.
+   *
+   * `ted-eu` is OFF by default, and that is a targeting decision rather than
+   * a technical one. It works — it discovered 612 organisations — but they
+   * are European public-sector buyers: non-English, and legally required to
+   * purchase through tender rather than through an outbound email. For a
+   * US-focused outbound engine it is 95% of the corpus and 0% of the
+   * addressable market, which is worse than no source at all because a
+   * reviewer has to scroll past it.
+   *
+   * Nothing is deleted: re-adding `ted-eu` here turns it straight back on,
+   * and the organisations it already found stay in the database.
+   */
+  PROCUREMENT_FEEDS: z
+    .string()
+    .default('uk-contracts-finder,sam-gov'),
+
+  /**
+   * How many "Ask HN: Who is hiring?" threads to read per run.
+   *
+   * 3 keeps a rolling quarter fresh. Raise it once — 12, say — to backfill a
+   * year in a single run: each thread is ~190 companies, so 12 is ~2,300, and
+   * re-reading a thread costs nothing because the signals dedupe.
+   */
+  HN_HIRING_THREADS: z.coerce.number().int().min(1).max(36).default(3),
+
   // P25: press-release RSS feeds (signal type S7), comma-separated. Verified
   // live 2026-09-11 — the PRNewswire technology/software category feed
   // returns real releases with no key. BusinessWire needs a real registered

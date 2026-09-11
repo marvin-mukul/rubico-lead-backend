@@ -129,6 +129,18 @@ export class AppConfigService {
   }
 
   /** RSS feed URLs for the press-release source (P25, signal type S7). */
+  /** How many monthly "Who is hiring?" threads to read per run. */
+  get hackerNewsHiringThreads(): number {
+    return this.env.HN_HIRING_THREADS;
+  }
+
+  /** Active procurement feeds. An empty value disables procurement entirely. */
+  get procurementFeeds(): string[] {
+    return this.env.PROCUREMENT_FEEDS.split(',')
+      .map((feed) => feed.trim())
+      .filter((feed) => feed.length > 0);
+  }
+
   get pressReleaseFeeds(): string[] {
     return this.env.PRESS_RELEASE_FEEDS.split(',')
       .map((url) => url.trim())
