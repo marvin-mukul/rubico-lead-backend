@@ -47,7 +47,7 @@ export class DigestService {
         band: lead.band,
         totalScore: lead.totalScore,
         likelyNeed: lead.likelyNeed,
-        rubicoService: lead.rubicoService,
+        archetype: lead.archetype,
         headline: headlineOf(lead.brief),
         topEvidenceUrl: topEvidence.get(lead.companyId) ?? null,
       })),

@@ -82,14 +82,28 @@ export class ScoringService {
     return score({ fitScore, signals, compoundBonus: compound.bonus, now }, params);
   }
 
-  /** Scores a company and upserts its lead. */
-  async upsertLead(companyId: string, fitScore: number, now: Date = new Date()): Promise<string> {
+  /**
+   * Scores a company and upserts its lead for one opportunity (P21).
+   *
+   * `opportunityKey` is what turns "one Lead per company" into "one Lead per
+   * company per opportunity" (§2.4): the composite unique on
+   * `(companyId, opportunityKey)` means a company already holding a
+   * `fix_slowing_software` lead gets a SECOND row, not an overwrite, the
+   * moment evidence for `ai_code_to_production` shows up. The scoring
+   * arithmetic itself stays company-wide (P21 preserves it, per §7) — only
+   * the archetype-carrying fields differ between a company's opportunities.
+   */
+  async upsertLead(
+    companyId: string,
+    opportunityKey: string,
+    fitScore: number,
+    now: Date = new Date(),
+  ): Promise<{ id: string; isNew: boolean; hadBrief: boolean }> {
     const result = await this.scoreCompany(companyId, fitScore, now);
 
-    const existing = await this.prisma.lead.findFirst({
-      where: { companyId },
-      orderBy: { createdAt: 'desc' },
-      select: { id: true },
+    const existing = await this.prisma.lead.findUnique({
+      where: { companyId_opportunityKey: { companyId, opportunityKey } },
+      select: { id: true, brief: true },
     });
 
     const data = {
@@ -103,10 +117,12 @@ export class ScoringService {
 
     if (existing) {
       await this.prisma.lead.update({ where: { id: existing.id }, data });
-      return existing.id;
+      return { id: existing.id, isNew: false, hadBrief: existing.brief !== null };
     }
-    const created = await this.prisma.lead.create({ data: { companyId, ...data } });
-    return created.id;
+    const created = await this.prisma.lead.create({
+      data: { companyId, opportunityKey, ...data },
+    });
+    return { id: created.id, isNew: true, hadBrief: false };
   }
 
   /**

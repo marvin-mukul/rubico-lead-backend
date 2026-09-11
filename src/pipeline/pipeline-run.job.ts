@@ -4,7 +4,6 @@ import { MeteringError } from '../common/metering/index.js';
 import { PrismaService } from '../common/prisma/index.js';
 import { FitFilterService, SuppressionService } from '../companies/index.js';
 import { EnrichmentService } from '../enrichment/index.js';
-import { Prisma } from '../generated/prisma/client.js';
 import type { CompanyModel as Company } from '../generated/prisma/models.js';
 import type { JobContext, JobHandler } from '../jobs/index.js';
 import {
@@ -80,8 +79,7 @@ export class PipelineRunJob implements JobHandler {
   }
 
   /**
-   * Companies worth spending on: active, **carrying fresh evidence**, and
-   * not already briefed.
+   * Companies worth spending on: active and **carrying fresh evidence**.
    *
    * The freshness clause is the point. FR-SC4 already forces a company whose
    * newest event signal is stale into band `ignore` — but scoring it
@@ -94,15 +92,19 @@ export class PipelineRunJob implements JobHandler {
    * thing we spend on and the thing that can be banded stay in step by
    * construction rather than by two numbers that drift apart.
    *
-   * ⚠ The obvious spelling of the last clause is a silent no-op. Prisma
-   * strips `undefined` from filters, so `brief: { not: undefined }` collapses
-   * to `{}` and `leads: { none: {} }` means "companies with no leads AT ALL".
-   * That capped every company at one Lead for life and killed the brief-retry
-   * path AnthropicProvider depends on when a batch misses its poll window.
-   * `NOT: { brief: { equals: Prisma.DbNull } }` is the spelling that
-   * survives. Plain `null` is rejected by the typed API for a nullable Json
-   * column, because Prisma distinguishes a SQL NULL (`DbNull`) from a JSON
-   * `null` literal (`JsonNull`); an absent brief is the former.
+   * P21: there is deliberately no `leads`-based exclusion here any more. The
+   * pre-P21 filter (`leads: { none: { ...has a brief... } } }`) meant a
+   * company that ever acquired one briefed lead was NEVER reprocessed again,
+   * whatever happened afterwards — new signals could never surface a SECOND
+   * opportunity at an already-known company (§2.4). Freshness is what bounds
+   * reprocessing now: a company drops out of `pending()` on its own once its
+   * newest event signal ages past the freshness window, exactly as before —
+   * it just no longer stays out forever because it once got one brief.
+   * `upsertLead`'s per-opportunity upsert (composite unique on
+   * `companyId, opportunityKey`) is what stops re-classifying a STABLE
+   * opportunity from producing duplicate leads or duplicate spend: the same
+   * archetype re-scores the same row, and `processCompany` only requests a
+   * fresh brief when the lead is new or has never had one.
    */
   private async pending(): Promise<Company[]> {
     const freshnessDays = await this.scoringConfig.get('scoring.eventSignalFreshnessDays', 30);
@@ -117,7 +119,6 @@ export class PipelineRunJob implements JobHandler {
             eventDate: { gte: freshSince },
           },
         },
-        leads: { none: { NOT: { brief: { equals: Prisma.DbNull } } } },
       },
       orderBy: { firstSeenAt: 'desc' },
       take: BATCH_LIMIT,
@@ -196,12 +197,25 @@ export class PipelineRunJob implements JobHandler {
     }
 
     // ── score ─────────────────────────────────────────────────────────────
-    const leadId = await this.scoring.upsertLead(current.id, fit.fitScore);
-    await this.classify.saveToLead(leadId, outcome);
+    // P21/P22: the archetype IS the opportunity key. A company already
+    // holding a `fix_slowing_software` lead gets a new row for
+    // `ai_code_to_production` rather than an overwrite. `'general'` is a
+    // defensive fallback only — the classifier should never confirm an
+    // opportunity (outcome.keep) while naming archetype 'none'.
+    const opportunityKey =
+      outcome.classification.archetype === 'none' ? 'general' : outcome.classification.archetype;
+    const lead = await this.scoring.upsertLead(current.id, opportunityKey, fit.fitScore);
+    await this.classify.saveToLead(lead.id, outcome);
     context.count('scored');
 
+    // Only pay for a brief when there is something new to say: a brand new
+    // opportunity, or one that has never had a brief (the P16 retry path).
+    // A stable, already-briefed opportunity re-scored on a subsequent run —
+    // because its evidence is still fresh — does not regenerate its brief.
+    if (!lead.isNew && lead.hadBrief) return null;
+
     return {
-      leadId,
+      leadId: lead.id,
       company: {
         id: current.id,
         canonicalDomain: current.canonicalDomain,

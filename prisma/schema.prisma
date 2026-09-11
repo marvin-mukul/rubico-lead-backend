@@ -67,6 +67,12 @@ model Signal {
 model Lead {
   id                String     @id @default(cuid())
   companyId         String
+  // P21: a company may hold several concurrent opportunities (§2.4). The key
+  // is the classifier's archetype once P22 runs; "general" is the fallback
+  // for anything scored before an archetype was assigned. No new table —
+  // the composite unique is what turns "one Lead per company" into
+  // "one Lead per company per opportunity".
+  opportunityKey    String     @default("general")
   fitScore          Int
   intentScore       Float
   compoundBonus     Int        @default(0)
@@ -74,7 +80,12 @@ model Lead {
   band              String // immediate | high | investigate | ignore
   llmClassification Json?
   likelyNeed        String?
-  rubicoService     String?
+  // P22: the archetype taxonomy (config/archetypes.json) replaces the old
+  // five-value rubico_service enum, which had no room for ai_code_to_production
+  // — Rubico's hero offer — or for the capabilities/why-chain below.
+  archetype           String?
+  rubicoCapabilities  Json?
+  whyThisLead         Json?
   brief             Json?
   confidence        String?
   status            String     @default("new")
@@ -83,6 +94,7 @@ model Lead {
   company           Company    @relation(fields: [companyId], references: [id])
   decisions         Decision[]
 
+  @@unique([companyId, opportunityKey])
   @@index([band, status, totalScore])
 }
 

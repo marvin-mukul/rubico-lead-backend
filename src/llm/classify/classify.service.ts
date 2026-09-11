@@ -2,9 +2,11 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AppConfigService } from '../../common/config/app-config.service.js';
 import { MeteredClient } from '../../common/metering/index.js';
 import { PrismaService } from '../../common/prisma/index.js';
+import { OpportunityConfigService } from '../../opportunity/index.js';
 import { LLM_CLASSIFY_PROVIDER, type LlmProvider } from '../llm-provider.interface.js';
-import { CLASSIFY_SYSTEM_PROMPT } from '../prompts.js';
+import { buildClassifySystemPrompt } from '../prompts.js';
 import { classificationSchema, type Classification } from '../schemas.js';
+import { validateClassification } from './classify-validation.js';
 
 export interface ClassifiableCompany {
   id: string;
@@ -36,13 +38,18 @@ export interface ClassificationOutcome {
 @Injectable()
 export class ClassifyService {
   private readonly logger = new Logger(ClassifyService.name);
+  /** Built once from static config (P22) — byte-identical across calls, so it still caches (FR-AI4). */
+  private readonly systemPrompt: string;
 
   constructor(
     @Inject(LLM_CLASSIFY_PROVIDER) private readonly provider: LlmProvider,
     private readonly metered: MeteredClient,
     private readonly config: AppConfigService,
     private readonly prisma: PrismaService,
-  ) {}
+    opportunityConfig: OpportunityConfigService,
+  ) {
+    this.systemPrompt = buildClassifySystemPrompt(opportunityConfig);
+  }
 
   async classify(
     company: ClassifiableCompany,
@@ -58,7 +65,7 @@ export class ClassifyService {
       estimatedCost: 0.0002,
       execute: () =>
         this.provider.complete({
-          system: CLASSIFY_SYSTEM_PROMPT,
+          system: this.systemPrompt,
           user: buildClassifyPrompt(company, signals),
           schema: classificationSchema,
           model,
@@ -71,14 +78,20 @@ export class ClassifyService {
     });
 
     void usage;
-    return this.evaluate(result);
+    return this.evaluate(
+      result,
+      new Set(signals.map((signal) => signal.id)),
+    );
   }
 
   /**
-   * FR-AI5: either refusal discards the record before scoring. Split out
-   * from the call so the rule is testable without touching a provider.
+   * FR-AI5: either refusal discards the record before scoring. FR-AI6
+   * (extended, P22): a why-this-lead step or a top-level citation naming a
+   * signal that does not exist for this company is a defect, discarded the
+   * same way — not repaired, not surfaced. Split out from the call so both
+   * rules are testable without touching a provider.
    */
-  evaluate(classification: Classification): ClassificationOutcome {
+  evaluate(classification: Classification, knownSignalIds: Set<string>): ClassificationOutcome {
     if (!classification.has_rubico_opportunity) {
       return {
         classification,
@@ -93,6 +106,16 @@ export class ClassifyService {
         discardReason: 'insufficient_evidence',
       };
     }
+
+    const validation = validateClassification(classification, knownSignalIds);
+    if (!validation.valid) {
+      this.logger.error(
+        `Classification discarded — invalid citation: ` +
+          validation.defects.map((defect) => defect.detail).join('; '),
+      );
+      return { classification, keep: false, discardReason: 'invalid_citation' };
+    }
+
     return { classification, keep: true };
   }
 
@@ -104,8 +127,9 @@ export class ClassifyService {
       data: {
         llmClassification: classification as never,
         likelyNeed: classification.likely_need,
-        rubicoService:
-          classification.rubico_service === 'none' ? null : classification.rubico_service,
+        archetype: classification.archetype === 'none' ? null : classification.archetype,
+        rubicoCapabilities: classification.rubico_capabilities as never,
+        whyThisLead: classification.why_this_lead as never,
         confidence: classification.confidence,
       },
     });

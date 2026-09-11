@@ -88,7 +88,9 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
         has_rubico_opportunity: true,
         evidence_sufficient: true,
         likely_need: 'Modernise',
-        rubico_service: 'legacy-modernisation' as const,
+        archetype: 'fix_slowing_software' as const,
+        rubico_capabilities: [],
+        why_this_lead: [],
         confidence: 'medium' as const,
         reasoning: 'because',
         cited_signal_ids: [],
@@ -181,7 +183,9 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
             has_rubico_opportunity: false,
             evidence_sufficient: true,
             likely_need: '',
-            rubico_service: 'none' as const,
+            archetype: 'none' as const,
+            rubico_capabilities: [],
+            why_this_lead: [],
             confidence: 'high' as const,
             reasoning: 'Out of ICP.',
             cited_signal_ids: [],
@@ -256,6 +260,72 @@ describe('pipeline.run (§7.2, FR-B10) [integration]', () => {
     expect(scored.has(companies[0].id)).toBe(true);
     expect(scored.has(companies[2].id)).toBe(true);
     expect(scored.has(poison)).toBe(false);
+  });
+
+  // P21 (§2.4) — a company already holding a briefed lead for one archetype
+  // must still surface a genuinely different opportunity, as a second row.
+  it('gives a company a second lead when a new archetype is classified', async () => {
+    const company = await makeCompany('SaaS');
+    // A DIFFERENT opportunity than the one `keeps.classify()` below returns
+    // (`fix_slowing_software`) — this is the case P21 exists for.
+    await prisma.lead.create({
+      data: {
+        companyId: company.id,
+        opportunityKey: 'idea_to_product',
+        fitScore: 10,
+        intentScore: 1,
+        totalScore: 11,
+        band: 'investigate',
+        scoredAt: new Date(),
+        brief: { headline: 'already briefed' },
+      },
+    });
+
+    const job = buildJob(keeps, {
+      generate: async (requests: BriefRequest[]) =>
+        requests.map((r) => ({ leadId: r.leadId, brief: {} as never })),
+    });
+
+    await job.run(new MutableJobContext('run', {}, false));
+
+    const leads = await prisma.lead.findMany({ where: { companyId: company.id } });
+    expect(leads).toHaveLength(2);
+    expect(leads.map((l) => l.opportunityKey).sort()).toEqual([
+      'fix_slowing_software',
+      'idea_to_product',
+    ]);
+  });
+
+  // P21 — re-scoring a stable, already-briefed opportunity must not spend
+  // on a second brief: `hadBrief` gates the BriefRequest.
+  it('does not re-brief an opportunity that already has one', async () => {
+    const company = await makeCompany('SaaS');
+    await prisma.lead.create({
+      data: {
+        companyId: company.id,
+        opportunityKey: 'fix_slowing_software',
+        fitScore: 10,
+        intentScore: 1,
+        totalScore: 11,
+        band: 'investigate',
+        scoredAt: new Date(),
+        brief: { headline: 'already briefed' },
+      },
+    });
+
+    let briefCalls = 0;
+    const job = buildJob(keeps, {
+      generate: async (requests: BriefRequest[]) => {
+        briefCalls += requests.length;
+        return requests.map((r) => ({ leadId: r.leadId, brief: {} as never }));
+      },
+    });
+
+    await job.run(new MutableJobContext('run', {}, false));
+
+    expect(briefCalls).toBe(0);
+    const leads = await prisma.lead.findMany({ where: { companyId: company.id } });
+    expect(leads).toHaveLength(1);
   });
 
   it('writes nothing on a dry run', async () => {
