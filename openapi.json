@@ -830,6 +830,14 @@
           "notes": {
             "type": "string",
             "maxLength": 2000
+          },
+          "attribution": {
+            "default": "builder",
+            "type": "string",
+            "enum": [
+              "management",
+              "builder"
+            ]
           }
         },
         "required": [
@@ -853,6 +861,13 @@
           "scoreAtDecision": {
             "type": "number"
           },
+          "attribution": {
+            "type": "string",
+            "enum": [
+              "management",
+              "builder"
+            ]
+          },
           "decidedAt": {
             "type": "string",
             "format": "date-time",
@@ -863,6 +878,7 @@
           "leadId",
           "status",
           "scoreAtDecision",
+          "attribution",
           "decidedAt"
         ],
         "additionalProperties": false
@@ -920,6 +936,76 @@
               "meanScoreRejected": {
                 "nullable": true,
                 "type": "number"
+              },
+              "byAttribution": {
+                "type": "object",
+                "properties": {
+                  "management": {
+                    "type": "object",
+                    "properties": {
+                      "approved": {
+                        "type": "number"
+                      },
+                      "rejected": {
+                        "type": "number"
+                      },
+                      "approvalRate": {
+                        "type": "number"
+                      },
+                      "meanScoreApproved": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "meanScoreRejected": {
+                        "nullable": true,
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "approved",
+                      "rejected",
+                      "approvalRate",
+                      "meanScoreApproved",
+                      "meanScoreRejected"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "builder": {
+                    "type": "object",
+                    "properties": {
+                      "approved": {
+                        "type": "number"
+                      },
+                      "rejected": {
+                        "type": "number"
+                      },
+                      "approvalRate": {
+                        "type": "number"
+                      },
+                      "meanScoreApproved": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "meanScoreRejected": {
+                        "nullable": true,
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "approved",
+                      "rejected",
+                      "approvalRate",
+                      "meanScoreApproved",
+                      "meanScoreRejected"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "management",
+                  "builder"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -927,7 +1013,8 @@
               "rejected",
               "approvalRate",
               "meanScoreApproved",
-              "meanScoreRejected"
+              "meanScoreRejected",
+              "byAttribution"
             ],
             "additionalProperties": false
           },
@@ -1478,6 +1565,13 @@
                     "attribution_error"
                   ]
                 },
+                "attribution": {
+                  "type": "string",
+                  "enum": [
+                    "management",
+                    "builder"
+                  ]
+                },
                 "notes": {
                   "nullable": true,
                   "type": "string"
@@ -1496,6 +1590,7 @@
                 "user",
                 "decision",
                 "reasonCode",
+                "attribution",
                 "notes",
                 "scoreAtDecision",
                 "decidedAt"
@@ -1821,6 +1916,16 @@
                 "recency"
               ]
             }
+          },
+          "decisionAttributions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "management",
+                "builder"
+              ]
+            }
           }
         },
         "required": [
@@ -1832,7 +1937,8 @@
           "evidenceLevels",
           "eventSignalTypes",
           "suppressionReasons",
-          "leadSorts"
+          "leadSorts",
+          "decisionAttributions"
         ],
         "additionalProperties": false
       },

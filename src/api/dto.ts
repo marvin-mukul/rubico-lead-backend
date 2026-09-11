@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { briefSchema, classificationSchema, whyThisLeadStepSchema } from '../llm/schemas.js';
 import { EVIDENCE_LEVELS } from '../opportunity/index.js';
 import {
+  DECISION_ATTRIBUTIONS,
   DECISION_REASON_CODES,
   DECISION_VALUES,
   EVENT_SIGNAL_TYPES,
@@ -73,6 +74,7 @@ export const metaResponseSchema = z.object({
   eventSignalTypes: z.array(z.enum(EVENT_SIGNAL_TYPES)),
   suppressionReasons: z.array(z.enum(SUPPRESSION_REASONS)),
   leadSorts: z.array(z.enum(LEAD_SORTS)),
+  decisionAttributions: z.array(z.enum(DECISION_ATTRIBUTIONS)),
 });
 
 // ── leads ───────────────────────────────────────────────────────────────
@@ -196,6 +198,7 @@ export const leadDetailResponseSchema = leadSummarySchema.extend({
       user: z.string(),
       decision: z.enum(DECISION_VALUES),
       reasonCode: z.enum(DECISION_REASON_CODES),
+      attribution: z.enum(DECISION_ATTRIBUTIONS),
       notes: z.string().nullable(),
       scoreAtDecision: z.number(),
       decidedAt: z.iso.datetime(),
@@ -207,12 +210,19 @@ export const decisionBodySchema = z.object({
   decision: z.enum(DECISION_VALUES),
   reasonCode: z.enum(DECISION_REASON_CODES),
   notes: z.string().max(2000).optional(),
+  /**
+   * Defaults to `builder` — the conservative direction. M4 and M5 count only
+   * management-attributed decisions, so an omitted attribution understates
+   * the headline metric rather than inflating it.
+   */
+  attribution: z.enum(DECISION_ATTRIBUTIONS).default('builder'),
 });
 
 export const decisionResponseSchema = z.object({
   leadId: z.string(),
   status: z.enum(DECISION_VALUES),
   scoreAtDecision: z.number(),
+  attribution: z.enum(DECISION_ATTRIBUTIONS),
   decidedAt: z.iso.datetime(),
 });
 
@@ -287,6 +297,14 @@ export const metricsRangeQuerySchema = z.object({
   to: z.iso.datetime().optional(),
 });
 
+const decisionTotalsSchema = z.object({
+  approved: z.number(),
+  rejected: z.number(),
+  approvalRate: z.number(),
+  meanScoreApproved: z.number().nullable(),
+  meanScoreRejected: z.number().nullable(),
+});
+
 export const funnelResponseSchema = z.object({
   from: z.iso.datetime(),
   to: z.iso.datetime(),
@@ -297,12 +315,16 @@ export const funnelResponseSchema = z.object({
   m5_discardedByClassifier: z.number(),
   m6_leadsScored: z.number(),
   m7_briefsGenerated: z.number(),
-  m8_decisions: z.object({
-    approved: z.number(),
-    rejected: z.number(),
-    approvalRate: z.number(),
-    meanScoreApproved: z.number().nullable(),
-    meanScoreRejected: z.number().nullable(),
+  m8_decisions: decisionTotalsSchema.extend({
+    /**
+     * FR-W18: management- and builder-attributed decisions, separately. M4
+     * and M5 count only the former, and the Day-30 review needs that split
+     * visible without a database query.
+     */
+    byAttribution: z.object({
+      management: decisionTotalsSchema,
+      builder: decisionTotalsSchema,
+    }),
   }),
   byBand: z.record(z.string(), z.number()),
 });

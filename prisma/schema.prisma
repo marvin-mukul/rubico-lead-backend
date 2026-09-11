@@ -130,8 +130,19 @@ model Decision {
   // The lead's score changes nightly and calibration (M6) needs the score the
   // human actually saw.
   scoreAtDecision Int
+  /// Whose judgement this was — management | builder (frontend FR-W18, addendum
+  /// FR-L12). With one shared Phase 0 credential `user` cannot answer this: the
+  /// Day-30 session is the builder recording a management reviewer's verdicts,
+  /// so both arrive under the same login.
+  ///
+  /// Defaults to `builder`, which is the conservative direction: M4 and M5 count
+  /// only management-attributed decisions, so an unlabelled decision understates
+  /// the headline metric rather than inflating it.
+  attribution     String   @default("builder")
   decidedAt       DateTime @default(now())
   lead            Lead     @relation(fields: [leadId], references: [id])
+
+  @@index([attribution, decidedAt])
 }
 
 model ApiUsage {

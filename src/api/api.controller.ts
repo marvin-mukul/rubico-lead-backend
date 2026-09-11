@@ -23,6 +23,7 @@ import {
 } from '../common/auth/index.js';
 import { AppConfigService } from '../common/config/app-config.service.js';
 import {
+  DECISION_ATTRIBUTIONS,
   DECISION_REASON_CODES,
   DECISION_VALUES,
   EVENT_SIGNAL_TYPES,
@@ -167,6 +168,7 @@ export class MetaController {
       eventSignalTypes: [...EVENT_SIGNAL_TYPES],
       suppressionReasons: [...SUPPRESSION_REASONS],
       leadSorts: [...LEAD_SORTS],
+      decisionAttributions: [...DECISION_ATTRIBUTIONS],
     };
   }
 }
