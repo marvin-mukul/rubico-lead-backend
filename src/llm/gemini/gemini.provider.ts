@@ -10,6 +10,8 @@ import type {
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 const TIMEOUT_MS = 60_000;
+/** Retryable attempts for a 429/5xx. Mirrors sources/http/source-http.client.ts. */
+const MAX_ATTEMPTS = 3;
 
 interface GeminiResponse {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
@@ -32,6 +34,17 @@ interface GeminiResponse {
  * automatically, so FR-AI4 is satisfied by putting the stable system prompt
  * first rather than by an explicit cachedContents call. `cachedContentTokenCount`
  * is reported back so the saving is visible in `api_usage`.
+ *
+ * Retry note: unlike the Anthropic provider — whose official SDK retries
+ * 429/5xx on its own — this is a hand-rolled `fetch()`, so nothing retries a
+ * rate limit unless this class does it. That matters concretely because
+ * `completeMany` below runs classify calls sequentially with no pacing: on a
+ * free-tier key's low RPM ceiling, a 200-company batch would otherwise fail
+ * every remaining company for the rest of that run the moment the first one
+ * gets throttled, rather than backing off and continuing. Mirrors the same
+ * retry shape `sources/http/source-http.client.ts` already uses for the free
+ * ingest sources — capped attempts, honour `Retry-After`, exponential backoff
+ * otherwise.
  */
 @Injectable()
 export class GeminiProvider implements LlmProvider {
@@ -42,32 +55,22 @@ export class GeminiProvider implements LlmProvider {
 
   async complete<T>(args: LlmCompleteArgs<T>): Promise<LlmCompletion<T>> {
     const url = `${ENDPOINT}/${args.model}:generateContent`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-goog-api-key': this.config.apiKeyFor('gemini'),
+    const requestBody = JSON.stringify({
+      systemInstruction: { parts: [{ text: args.system }] },
+      contents: [{ role: 'user', parts: [{ text: args.user }] }],
+      generationConfig: {
+        // FR-AI2: the schema constrains generation; no free-text parsing.
+        responseMimeType: 'application/json',
+        responseSchema: toGeminiSchema(z.toJSONSchema(args.schema, { target: 'draft-2020-12' })),
+        maxOutputTokens: args.maxTokens ?? 4_000,
+        temperature: 0,
       },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: args.system }] },
-        contents: [{ role: 'user', parts: [{ text: args.user }] }],
-        generationConfig: {
-          // FR-AI2: the schema constrains generation; no free-text parsing.
-          responseMimeType: 'application/json',
-          responseSchema: toGeminiSchema(z.toJSONSchema(args.schema, { target: 'draft-2020-12' })),
-          maxOutputTokens: args.maxTokens ?? 4_000,
-          temperature: 0,
-        },
-      }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
+    const response = await this.fetchWithRetry(url, requestBody);
     const body = (await response.json()) as GeminiResponse;
     if (!response.ok || body.error) {
-      throw new Error(
-        `Gemini ${response.status}: ${body.error?.message ?? response.statusText}`,
-      );
+      throw new Error(`Gemini ${response.status}: ${body.error?.message ?? response.statusText}`);
     }
 
     const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? '';
@@ -84,6 +87,41 @@ export class GeminiProvider implements LlmProvider {
     };
 
     return { result: args.schema.parse(JSON.parse(text)), usage };
+  }
+
+  /**
+   * A 429 or 5xx retries up to `MAX_ATTEMPTS`; anything else — including a
+   * 200 carrying a Gemini-level `error` field — is returned as-is for
+   * `complete` to interpret, since that shape isn't a transport failure.
+   */
+  private async fetchWithRetry(url: string, body: string): Promise<Response> {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-goog-api-key': this.config.apiKeyFor('gemini'),
+        },
+        body,
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+
+      const retryable = response.status === 429 || response.status >= 500;
+      if (!retryable || attempt === MAX_ATTEMPTS) return response;
+
+      const retryAfterHeader = Number(response.headers.get('retry-after'));
+      const waitMs =
+        Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+          ? retryAfterHeader * 1000
+          : 500 * 2 ** (attempt - 1);
+      this.logger.warn(
+        `Gemini ${response.status}; retrying in ${waitMs}ms (${attempt}/${MAX_ATTEMPTS})`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+    // Unreachable — the loop always returns by the final attempt — but
+    // satisfies the compiler's control-flow analysis.
+    throw new Error('Gemini: exhausted retries');
   }
 
   /**
