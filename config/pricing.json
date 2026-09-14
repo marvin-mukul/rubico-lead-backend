@@ -36,6 +36,13 @@
       "cachedInputPerMTok": 0.075,
       "cacheWritePerMTok": 0.3,
       "batchMultiplier": 0.5
+    },
+    "gemini-3.5-flash-lite": {
+      "inputPerMTok": 0.3,
+      "outputPerMTok": 2.5,
+      "cachedInputPerMTok": 0.03,
+      "cacheWritePerMTok": 0.3,
+      "batchMultiplier": 0.5
     }
   }
 }
