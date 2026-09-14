@@ -59,7 +59,7 @@ export const envSchema = z.object({
 
   // ── LLM selection (§11, FR-B20) ──────────────────────────────────────────
   LLM_CLASSIFY_PROVIDER: z.enum(LLM_PROVIDERS).default('gemini'),
-  LLM_CLASSIFY_MODEL: z.string().min(1).default('gemini-2.5-flash-lite'),
+  LLM_CLASSIFY_MODEL: z.string().min(1).default('gemini-3.5-flash-lite'),
   LLM_BRIEF_PROVIDER: z.enum(LLM_PROVIDERS).default('anthropic'),
   LLM_BRIEF_MODEL: z.string().min(1).default('claude-sonnet-5'),
   // FR-AI3: briefs go through the batch endpoint (50% off).

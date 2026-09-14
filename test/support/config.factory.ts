@@ -22,7 +22,7 @@ export function testConfig(overrides: Partial<Env> = {}): AppConfigService {
     N8N_ALERT_WEBHOOK_URL: 'http://localhost:5678/webhook/test',
     N8N_WEBHOOK_TOKEN: 'test-webhook-token',
     LLM_CLASSIFY_PROVIDER: 'gemini',
-    LLM_CLASSIFY_MODEL: 'gemini-2.5-flash-lite',
+    LLM_CLASSIFY_MODEL: 'gemini-3.5-flash-lite',
     LLM_BRIEF_PROVIDER: 'anthropic',
     LLM_BRIEF_MODEL: 'claude-sonnet-5',
     LLM_BRIEF_BATCH: true,
