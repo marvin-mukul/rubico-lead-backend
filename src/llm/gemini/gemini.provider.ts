@@ -12,6 +12,23 @@ const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 const TIMEOUT_MS = 60_000;
 /** Retryable attempts for a 429/5xx. Mirrors sources/http/source-http.client.ts. */
 const MAX_ATTEMPTS = 3;
+/**
+ * Minimum gap between dispatched calls, in ms.
+ *
+ * Measured live against a free-tier key on 2026-09-14: 16 sequential
+ * requests succeeded, the 17th and every one after it got a 429 with no
+ * `Retry-After` header and no recovery within several more seconds — a hard
+ * per-minute wall, not a soft throttle. Retrying (above) cannot fix that;
+ * only never approaching the wall can. 4500ms keeps a sustained run at
+ * ~13.3/min, comfortably under the observed ~16/min ceiling with margin for
+ * the limit shifting slightly.
+ *
+ * This exists specifically for the free tier. Once billing is linked (Tier
+ * 1's ceiling is well above this pace), raise it or make it configurable —
+ * it costs real wall-clock time on every classify call for no reason once
+ * the RPM ceiling is no longer the binding constraint.
+ */
+const MIN_CALL_INTERVAL_MS = 4_500;
 
 interface GeminiResponse {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
@@ -50,10 +67,13 @@ interface GeminiResponse {
 export class GeminiProvider implements LlmProvider {
   readonly name = 'gemini' as const;
   private readonly logger = new Logger(GeminiProvider.name);
+  /** Epoch ms of the next slot a call may dispatch in. 0 means "never yet". */
+  private nextSlotAt = 0;
 
   constructor(private readonly config: AppConfigService) {}
 
   async complete<T>(args: LlmCompleteArgs<T>): Promise<LlmCompletion<T>> {
+    await this.pace();
     const url = `${ENDPOINT}/${args.model}:generateContent`;
     const requestBody = JSON.stringify({
       systemInstruction: { parts: [{ text: args.system }] },
@@ -87,6 +107,26 @@ export class GeminiProvider implements LlmProvider {
     };
 
     return { result: args.schema.parse(JSON.parse(text)), usage };
+  }
+
+  /**
+   * Waits until the next free slot, then reserves the slot after it before
+   * returning — so two calls started concurrently (classify runs one
+   * company at a time today, but nothing here assumes that stays true)
+   * still queue behind each other instead of both dispatching immediately.
+   *
+   * `nextSlotAt` already has one interval baked in once a call has run, so
+   * the slot for *this* call is `max(now, nextSlotAt)`, not
+   * `max(now, nextSlotAt) + MIN_CALL_INTERVAL_MS` — adding the interval
+   * again there previously double-counted it on every call after the
+   * first, including ones arriving long after their slot had passed.
+   */
+  private async pace(): Promise<void> {
+    const now = Date.now();
+    const slot = Math.max(now, this.nextSlotAt);
+    this.nextSlotAt = slot + MIN_CALL_INTERVAL_MS;
+    const waitMs = slot - now;
+    if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
 
   /**
