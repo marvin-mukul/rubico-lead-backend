@@ -48,6 +48,11 @@ import {
   createContactBodySchema,
   decisionBodySchema,
   decisionResponseSchema,
+  funnelClassificationListResponseSchema,
+  funnelClassificationQuerySchema,
+  funnelCompanyListResponseSchema,
+  funnelPageQuerySchema,
+  funnelSignalListResponseSchema,
   leadDetailResponseSchema,
   leadListQuerySchema,
   leadListResponseSchema,
@@ -60,10 +65,13 @@ import {
   type ContactListQuery,
   type CreateContactBody,
   type DecisionBody,
+  type FunnelClassificationQuery,
+  type FunnelPageQuery,
   type LeadListQuery,
   type LoginBody,
   type ScoringConfigPatch,
 } from './dto.js';
+import { FunnelService } from './funnel.service.js';
 import { LeadsService } from './leads.service.js';
 import { ApiZodBody, ApiZodOk, ApiZodQuery, ApiZodResponse } from './openapi.js';
 
@@ -299,5 +307,44 @@ export class ScoringConfigController {
       await this.config.set(update.key, update.value, session.sub);
     }
     return this.get();
+  }
+}
+
+/**
+ * Read-only visibility onto M1–M7, one record at a time — what Metrics only
+ * counts. Nothing here is a control: no endpoint here changes what the
+ * pipeline does or bypasses a gate. A human who wants to act on what they
+ * see still does it through the existing Lead decision flow.
+ */
+@ApiTags('funnel')
+@Controller('api/funnel')
+@SessionAuth()
+export class FunnelController {
+  constructor(private readonly funnel: FunnelService) {}
+
+  /** M1 — every ingested signal. */
+  @Get('signals')
+  @ApiZodQuery(funnelPageQuerySchema)
+  @ApiZodOk('FunnelSignalListResponse', funnelSignalListResponseSchema)
+  signals(@Query(new ZodValidationPipe(funnelPageQuerySchema)) query: FunnelPageQuery) {
+    return this.funnel.signals(query);
+  }
+
+  /** M2 (all) / M3 (frontend filters on `passesFitFilter`). */
+  @Get('companies')
+  @ApiZodQuery(funnelPageQuerySchema)
+  @ApiZodOk('FunnelCompanyListResponse', funnelCompanyListResponseSchema)
+  companies(@Query(new ZodValidationPipe(funnelPageQuerySchema)) query: FunnelPageQuery) {
+    return this.funnel.companies(query);
+  }
+
+  /** M4 (all) / M5 (`?keep=false`). */
+  @Get('classifications')
+  @ApiZodQuery(funnelClassificationQuerySchema)
+  @ApiZodOk('FunnelClassificationListResponse', funnelClassificationListResponseSchema)
+  classifications(
+    @Query(new ZodValidationPipe(funnelClassificationQuerySchema)) query: FunnelClassificationQuery,
+  ) {
+    return this.funnel.classifications(query);
   }
 }

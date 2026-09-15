@@ -35,6 +35,15 @@ model Company {
   // ascending (nulls first) so the pipeline round-robins the whole eligible
   // set instead of re-reading the newest BATCH_LIMIT rows forever.
   lastPipelineRunAt DateTime?
+  // Funnel visibility (M4/M5): the classifier's most recent verdict for this
+  // company, recorded purely so a human can see it without re-running the
+  // LLM. Read-only bookkeeping — never read by scoring, classify, or any
+  // gating decision; nothing here changes what the pipeline does.
+  lastClassifiedAt   DateTime?
+  lastClassifyKeep   Boolean?
+  // { reason } when discarded, { likelyNeed, archetype } when kept — see
+  // ClassificationOutcome in classify.service.ts.
+  lastClassification Json?
   suppressionReason String? // client | competitor | rejected | do-not-contact
   signals           Signal[]
   leads             Lead[]

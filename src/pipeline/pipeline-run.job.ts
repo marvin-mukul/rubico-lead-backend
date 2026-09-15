@@ -11,6 +11,7 @@ import {
   ClassifyService,
   type BriefRequest,
   type ClassifiableSignal,
+  type ClassificationOutcome,
 } from '../llm/index.js';
 import { OpportunityTriggerService } from '../opportunity/index.js';
 import { ScoringConfigService } from '../scoring-config/index.js';
@@ -229,6 +230,7 @@ export class PipelineRunJob implements JobHandler {
       signals,
     );
     context.count('classified');
+    await this.recordClassification(current.id, outcome);
 
     // FR-AI5: a refusal discards the record BEFORE scoring, so no lead row,
     // no score, and above all no brief is ever paid for.
@@ -289,6 +291,38 @@ export class PipelineRunJob implements JobHandler {
     }
   }
 
+  /**
+   * Funnel visibility (M4/M5): records the classifier's verdict on the
+   * company it was already computed for, rather than letting it evaporate
+   * once `processCompany` returns. Purely additive bookkeeping — read by
+   * `FunnelService` only; nothing in this job or `ClassifyService` reads it
+   * back, so it cannot affect what the pipeline decides.
+   *
+   * `updateMany`, not `update` — same reasoning as `markExamined`: the
+   * company can be gone by the time this runs (deleted or merged mid-run),
+   * and bookkeeping must never abort a run that has already done its real
+   * classify/score/brief work over a missing row.
+   */
+  private async recordClassification(
+    companyId: string,
+    outcome: ClassificationOutcome,
+  ): Promise<void> {
+    await this.prisma.company.updateMany({
+      where: { id: companyId },
+      data: {
+        lastClassifiedAt: new Date(),
+        lastClassifyKeep: outcome.keep,
+        lastClassification:
+          outcome.keep ?
+            {
+              likelyNeed: outcome.classification.likely_need,
+              archetype: outcome.classification.archetype,
+            }
+          : { reason: outcome.discardReason ?? null },
+      },
+    });
+  }
+
   private async loadSignals(companyId: string): Promise<ClassifiableSignal[]> {
     const rows = await this.prisma.signal.findMany({
       where: { companyId },
@@ -307,7 +341,7 @@ export class PipelineRunJob implements JobHandler {
   }
 }
 
-function hasLegacyMarkers(legacyFlags: unknown): boolean {
+export function hasLegacyMarkers(legacyFlags: unknown): boolean {
   if (!legacyFlags || typeof legacyFlags !== 'object') return false;
   return Object.keys(legacyFlags as Record<string, unknown>).some((key) => key !== 'checkedAt');
 }
@@ -322,7 +356,7 @@ const SERVICED_PLATFORMS = [
   'drupal-current',
 ];
 
-function hasPlatformMarkers(detectedStack: unknown): boolean {
+export function hasPlatformMarkers(detectedStack: unknown): boolean {
   if (!detectedStack || typeof detectedStack !== 'object') return false;
   const keys = Object.keys(detectedStack as Record<string, unknown>);
   return SERVICED_PLATFORMS.some((platform) => keys.includes(platform));
