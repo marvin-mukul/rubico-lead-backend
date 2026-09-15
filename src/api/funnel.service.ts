@@ -52,6 +52,8 @@ export class FunnelService {
       }),
     ]);
 
+    const leadIds = await this.latestLeadIdByCompany(rows.map((row) => row.companyId));
+
     return {
       page: query.page,
       pageSize: query.pageSize,
@@ -68,6 +70,10 @@ export class FunnelService {
         sourceUrl: signal.sourceUrl,
         excerpt: signal.excerpt,
         evidenceStrength: signal.evidenceStrength,
+        // BD reach-out: a signal whose company already has a lead should open
+        // the full lead page (score, evidence, brief, decision), not just the
+        // bare company profile — see `leadId`'s own comment in dto.ts.
+        leadId: leadIds.get(signal.companyId) ?? null,
       })),
     };
   }
@@ -95,13 +101,14 @@ export class FunnelService {
     ]);
 
     const companyIds = rows.map((row) => row.id);
-    const [latestSignals, emails, fitResults] = await Promise.all([
+    const [latestSignals, emails, leadIds, fitResults] = await Promise.all([
       this.prisma.signal.groupBy({
         by: ['companyId'],
         where: { companyId: { in: companyIds } },
         _max: { eventDate: true },
       }),
       this.latestEmailByCompany(companyIds),
+      this.latestLeadIdByCompany(companyIds),
       Promise.all(
         rows.map((company) =>
           this.fitFilter.evaluate({
@@ -140,6 +147,7 @@ export class FunnelService {
         fitScore: fitResults[index]!.fitScore,
         passesFitFilter: fitResults[index]!.passes,
         email: emails.get(company.id) ?? null,
+        leadId: leadIds.get(company.id) ?? null,
       })),
     };
   }
@@ -161,7 +169,11 @@ export class FunnelService {
       }),
     ]);
 
-    const emails = await this.latestEmailByCompany(rows.map((row) => row.id));
+    const companyIds = rows.map((row) => row.id);
+    const [emails, leadIds] = await Promise.all([
+      this.latestEmailByCompany(companyIds),
+      this.latestLeadIdByCompany(companyIds),
+    ]);
 
     return {
       page: query.page,
@@ -184,6 +196,7 @@ export class FunnelService {
           // Non-null by construction of the `where` clause above.
           classifiedAt: company.lastClassifiedAt!.toISOString(),
           email: emails.get(company.id) ?? null,
+          leadId: leadIds.get(company.id) ?? null,
         };
       }),
     };
@@ -202,6 +215,27 @@ export class FunnelService {
       // First hit per company wins — `orderBy: resolvedAt desc` means that's
       // the most recently resolved one.
       if (!byCompany.has(contact.companyId)) byCompany.set(contact.companyId, contact.email);
+    }
+    return byCompany;
+  }
+
+  /**
+   * The most recently scored lead per company, if any. A company can hold
+   * more than one lead (P21 — a second opportunity, a different archetype);
+   * the most recently scored one is the one worth surfacing from a funnel
+   * row, same tiebreak the Leads list itself defaults to. Batched — never
+   * N+1.
+   */
+  private async latestLeadIdByCompany(companyIds: string[]): Promise<Map<string, string>> {
+    if (companyIds.length === 0) return new Map();
+    const leads = await this.prisma.lead.findMany({
+      where: { companyId: { in: companyIds } },
+      orderBy: { scoredAt: 'desc' },
+      select: { companyId: true, id: true },
+    });
+    const byCompany = new Map<string, string>();
+    for (const lead of leads) {
+      if (!byCompany.has(lead.companyId)) byCompany.set(lead.companyId, lead.id);
     }
     return byCompany;
   }

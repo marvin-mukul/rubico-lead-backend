@@ -1136,6 +1136,10 @@
                 "email": {
                   "nullable": true,
                   "type": "string"
+                },
+                "leadId": {
+                  "nullable": true,
+                  "type": "string"
                 }
               },
               "required": [
@@ -1147,7 +1151,8 @@
                 "likelyNeed",
                 "archetype",
                 "classifiedAt",
-                "email"
+                "email",
+                "leadId"
               ],
               "additionalProperties": false
             }
@@ -1242,6 +1247,10 @@
                 "email": {
                   "nullable": true,
                   "type": "string"
+                },
+                "leadId": {
+                  "nullable": true,
+                  "type": "string"
                 }
               },
               "required": [
@@ -1259,7 +1268,8 @@
                 "latestSignalAt",
                 "fitScore",
                 "passesFitFilter",
-                "email"
+                "email",
+                "leadId"
               ],
               "additionalProperties": false
             }
@@ -1503,6 +1513,10 @@
                     "E3",
                     "E4"
                   ]
+                },
+                "leadId": {
+                  "nullable": true,
+                  "type": "string"
                 }
               },
               "required": [
@@ -1516,7 +1530,8 @@
                 "sourceName",
                 "sourceUrl",
                 "excerpt",
-                "evidenceStrength"
+                "evidenceStrength",
+                "leadId"
               ],
               "additionalProperties": false
             }
