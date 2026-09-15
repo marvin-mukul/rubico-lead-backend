@@ -343,6 +343,14 @@ export const funnelSignalRowSchema = z.object({
   sourceUrl: z.string(),
   excerpt: z.string().nullable(),
   evidenceStrength: z.enum(EVIDENCE_LEVELS).nullable(),
+  /**
+   * The company's most recently scored lead, if one exists yet. When set,
+   * the frontend opens the full lead page (score, evidence, brief, decision)
+   * instead of the bare company profile — the whole point of a BD reviewer
+   * browsing the funnel is to jump straight to everything needed to reach
+   * out, not just company firmographics.
+   */
+  leadId: z.string().nullable(),
 });
 
 export const funnelSignalListResponseSchema = z.object({
@@ -375,6 +383,8 @@ export const funnelCompanyRowSchema = z.object({
   passesFitFilter: z.boolean(),
   /** Most recently resolved contact email for this company, if any (manual entry only — nothing auto-populates this yet). */
   email: z.string().nullable(),
+  /** See funnelSignalRowSchema's `leadId` comment. */
+  leadId: z.string().nullable(),
 });
 
 export const funnelCompanyListResponseSchema = z.object({
@@ -401,6 +411,8 @@ export const funnelClassificationRowSchema = z.object({
   archetype: z.string().nullable(),
   classifiedAt: z.iso.datetime(),
   email: z.string().nullable(),
+  /** See funnelSignalRowSchema's `leadId` comment. */
+  leadId: z.string().nullable(),
 });
 
 export const funnelClassificationListResponseSchema = z.object({
