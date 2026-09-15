@@ -326,6 +326,16 @@ export const scoringConfigPatchSchema = z.object({
 export const funnelPageQuerySchema = z.object({
   from: z.iso.date().optional(),
   to: z.iso.date().optional(),
+  /**
+   * Exact match on `Signal.sourceName` (e.g. `hackernews-hiring`,
+   * `ats:greenhouse`, `procurement:sam-gov`) — free text, not an enum: the
+   * set of real source names comes from what ingestion sources actually
+   * exist, which changes as sources are added, not from a fixed vocabulary
+   * a screen would have to keep in step. `GET /api/funnel/signals`'s
+   * `bySource` breakdown is the authoritative list of what currently has
+   * data, and is what the frontend builds its filter options from.
+   */
+  source: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
@@ -353,11 +363,21 @@ export const funnelSignalRowSchema = z.object({
   leadId: z.string().nullable(),
 });
 
+export const funnelSourceCountSchema = z.object({ source: z.string(), count: z.number() });
+
 export const funnelSignalListResponseSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
   total: z.number(),
   signals: z.array(funnelSignalRowSchema),
+  /**
+   * Every source name present in this date window (ignoring the `source`
+   * filter itself, so the full breakdown stays visible while one is
+   * selected), most frequent first. This is what "hn-hiring is most of our
+   * signal volume" actually looks like as data, not an impression — and it's
+   * the frontend's only source for which filter options to offer.
+   */
+  bySource: z.array(funnelSourceCountSchema),
 });
 
 // M2 (every row) / M3 (rows where passesFitFilter is true) — one per company.

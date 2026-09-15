@@ -39,9 +39,10 @@ export class FunnelService {
   /** M1 — every ingested signal, newest observed first. */
   async signals(query: FunnelPageQuery) {
     const range = dateRange(query);
-    const where = range ? { observedAt: range } : {};
+    const dateWhere = range ? { observedAt: range } : {};
+    const where = { ...dateWhere, ...(query.source ? { sourceName: query.source } : {}) };
 
-    const [total, rows] = await Promise.all([
+    const [total, rows, bySourceRaw] = await Promise.all([
       this.prisma.signal.count({ where }),
       this.prisma.signal.findMany({
         where,
@@ -49,6 +50,19 @@ export class FunnelService {
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
         include: { company: { select: { canonicalDomain: true, name: true } } },
+      }),
+      // Deliberately over `dateWhere`, not `where` — the breakdown must stay
+      // complete while one source is selected, or a reviewer filtering to
+      // "hackernews-hiring" would lose the very comparison that made them
+      // want to filter in the first place.
+      this.prisma.signal.groupBy({
+        by: ['sourceName'],
+        where: dateWhere,
+        _count: { _all: true },
+        // sourceName is the grouped field and is never null on Signal, so
+        // counting it is exactly the group size — same number as `_all`,
+        // just in the shape `orderBy` accepts for an aggregate.
+        orderBy: { _count: { sourceName: 'desc' } },
       }),
     ]);
 
@@ -58,6 +72,7 @@ export class FunnelService {
       page: query.page,
       pageSize: query.pageSize,
       total,
+      bySource: bySourceRaw.map((row) => ({ source: row.sourceName, count: row._count?._all ?? 0 })),
       signals: rows.map((signal) => ({
         id: signal.id,
         companyId: signal.companyId,
@@ -87,7 +102,13 @@ export class FunnelService {
    */
   async companies(query: FunnelPageQuery) {
     const range = dateRange(query);
-    const where = range ? { firstSeenAt: range } : {};
+    const where = {
+      ...(range ? { firstSeenAt: range } : {}),
+      // "Discovered via this source" — a company can carry signals from
+      // several sources, so this asks "has at least one from X", not "was
+      // found by X" (nothing marks which signal created the Company row).
+      ...(query.source ? { signals: { some: { sourceName: query.source } } } : {}),
+    };
 
     const [total, rows] = await Promise.all([
       this.prisma.company.count({ where }),
@@ -157,6 +178,7 @@ export class FunnelService {
     const where = {
       lastClassifiedAt: { not: null, ...dateRange(query) },
       ...(query.keep === undefined ? {} : { lastClassifyKeep: query.keep === 'true' }),
+      ...(query.source ? { signals: { some: { sourceName: query.source } } } : {}),
     };
 
     const [total, rows] = await Promise.all([
