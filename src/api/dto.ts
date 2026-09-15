@@ -130,6 +130,10 @@ export const leadSummarySchema = z.object({
   opportunityKey: z.string(),
   confidence: z.string().nullable(),
   scoredAt: z.iso.datetime(),
+  // Funnel M7: whether a brief exists, without shipping the (possibly large)
+  // brief content itself on a list row. The Funnel tab uses this to show
+  // "briefed vs not" without an N+1 fetch of every lead's detail.
+  hasBrief: z.boolean(),
 });
 
 export const leadListResponseSchema = z.object({
@@ -311,6 +315,101 @@ export const scoringConfigPatchSchema = z.object({
     .max(100),
 });
 
+// ── funnel (read-only visibility, M1–M7) ────────────────────────────────
+/**
+ * A human-readable window onto the same funnel Metrics counts (M1–M7), one
+ * record at a time. Nothing here changes what the pipeline decides — every
+ * field is either already stored, or (M3's `fitScore`/`passesFitFilter`)
+ * recomputed live through the exact same `FitFilterService` the real
+ * pipeline uses, never a second implementation of the check.
+ */
+export const funnelPageQuerySchema = z.object({
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+// M1 — one row per ingested signal.
+export const funnelSignalRowSchema = z.object({
+  id: z.string(),
+  companyId: z.string(),
+  canonicalDomain: z.string(),
+  companyName: z.string(),
+  type: z.enum(SIGNAL_TYPES),
+  eventDate: z.iso.datetime(),
+  observedAt: z.iso.datetime(),
+  sourceName: z.string(),
+  sourceUrl: z.string(),
+  excerpt: z.string().nullable(),
+  evidenceStrength: z.enum(EVIDENCE_LEVELS).nullable(),
+});
+
+export const funnelSignalListResponseSchema = z.object({
+  page: z.number(),
+  pageSize: z.number(),
+  total: z.number(),
+  signals: z.array(funnelSignalRowSchema),
+});
+
+// M2 (every row) / M3 (rows where passesFitFilter is true) — one per company.
+export const funnelCompanyRowSchema = z.object({
+  id: z.string(),
+  canonicalDomain: z.string(),
+  name: z.string(),
+  country: z.string().nullable(),
+  region: z.string().nullable(),
+  industry: z.string().nullable(),
+  headcountBand: z.string().nullable(),
+  firstSeenAt: z.iso.datetime(),
+  lastEnrichedAt: z.iso.datetime().nullable(),
+  suppressionReason: z.enum(SUPPRESSION_REASONS).nullable(),
+  signalCount: z.number(),
+  latestSignalAt: z.iso.datetime().nullable(),
+  // Live, not stored: "would this pass the fit filter right now", computed
+  // through FitFilterService against current scoring_config. M3 in the
+  // Metrics funnel is a count of what passed AT CLASSIFY TIME in each run;
+  // this can disagree with that historical count if scoring_config or the
+  // company's own data changed since — it answers "today", not "back then".
+  fitScore: z.number(),
+  passesFitFilter: z.boolean(),
+  /** Most recently resolved contact email for this company, if any (manual entry only — nothing auto-populates this yet). */
+  email: z.string().nullable(),
+});
+
+export const funnelCompanyListResponseSchema = z.object({
+  page: z.number(),
+  pageSize: z.number(),
+  total: z.number(),
+  companies: z.array(funnelCompanyRowSchema),
+});
+
+export const funnelClassificationQuerySchema = funnelPageQuerySchema.extend({
+  /** Filter to `true` for M4 kept, `false` for M5 discarded. Omitted: both (M4's full total). */
+  keep: z.enum(['true', 'false']).optional(),
+});
+
+// M4 (every classified company) / M5 (keep=false only).
+export const funnelClassificationRowSchema = z.object({
+  companyId: z.string(),
+  canonicalDomain: z.string(),
+  companyName: z.string(),
+  keep: z.boolean(),
+  /** Set when keep is false — see ClassificationOutcome.discardReason. */
+  reason: z.string().nullable(),
+  likelyNeed: z.string().nullable(),
+  archetype: z.string().nullable(),
+  classifiedAt: z.iso.datetime(),
+  email: z.string().nullable(),
+});
+
+export const funnelClassificationListResponseSchema = z.object({
+  page: z.number(),
+  pageSize: z.number(),
+  total: z.number(),
+  classifications: z.array(funnelClassificationRowSchema),
+});
+
 // ── metrics ─────────────────────────────────────────────────────────────
 export const metricsRangeQuerySchema = z.object({
   from: z.iso.datetime().optional(),
@@ -393,3 +492,5 @@ export type ScoringConfigPatch = z.infer<typeof scoringConfigPatchSchema>;
 export type MetricsRangeQuery = z.infer<typeof metricsRangeQuerySchema>;
 export type DigestQuery = z.infer<typeof digestQuerySchema>;
 export type ContactListQuery = z.infer<typeof contactListQuerySchema>;
+export type FunnelPageQuery = z.infer<typeof funnelPageQuerySchema>;
+export type FunnelClassificationQuery = z.infer<typeof funnelClassificationQuerySchema>;

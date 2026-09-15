@@ -95,6 +95,9 @@ export class LeadsService {
         opportunityKey: lead.opportunityKey,
         confidence: lead.confidence,
         scoredAt: lead.scoredAt.toISOString(),
+        // Funnel M7: brief content is heavy and already fetched by GET
+        // /api/leads/:id — the list row only needs to say whether one exists.
+        hasBrief: lead.brief !== null,
       })),
     };
   }
@@ -136,6 +139,7 @@ export class LeadsService {
       opportunityKey: lead.opportunityKey,
       confidence: lead.confidence,
       scoredAt: lead.scoredAt.toISOString(),
+      hasBrief: lead.brief !== null,
       brief: lead.brief ?? null,
       llmClassification: lead.llmClassification ?? null,
       rubicoCapabilities: (lead.rubicoCapabilities as string[] | null) ?? null,
